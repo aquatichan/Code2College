@@ -1,5 +1,25 @@
 # 2026-2027 Code2College Project Portfolio
 
+## 2. 👹 Runtime Escape (last updated 6/13/26)
+
+**Runtime Escape** is a browser-based dungeon crawler that transforms programming concepts into fast-paced action puzzles. Players descend through six procedurally generated worlds, each themed around a fundamental computer science topic, collecting scattered code fragments while avoiding bugs, hazards, and corrupted entities lurking throughout the system.
+
+Every world introduces a unique mechanic inspired by programming itself—from branching conditionals and looping enemies to maze-like list structures, sweeping laser grids, and an epic final battle against the Stack Overflow. Completing each stage requires mastering its gimmick while assembling enough code fragments to repair the program and escape before the runtime collapses.
+
+The game blends arcade gameplay with educational themes, presenting coding ideas through interactive mechanics rather than traditional tutorials. As players progress deeper into the corrupted runtime, each level becomes more challenging, culminating in a final boss fight where combat and programming collide.
+
+### Features
+
+* 🏰 **Six unique worlds**, each centered around a different computer science concept
+* 💾 **Collect hidden code fragments** to repair the program and unlock the next stage
+* 🎲 **Procedurally generated levels** for fresh layouts every playthrough
+* 👾 Multiple enemy types, environmental hazards, and world-specific gimmicks
+* 🌀 Programming-inspired mechanics including conditionals, loops, lists, laser grids, and boss combat
+* ⚔️ Real-time movement and melee combat with keyboard or on-screen controls
+* 🧩 Educational themes presented through gameplay rather than direct instruction
+* 🌐 Runs entirely in the browser with **no installation or build process required**
+
+
 ## 1. 🎵 MP3'd (last updated 6/11/26)
 
 **MP3'd** is a 3D synthwave rhythm game that turns any MP3 into a playable music experience. Players drive a neon sports car through a retro-futuristic sunset while steering between lanes and hitting rhythm markers synchronized to the music.
