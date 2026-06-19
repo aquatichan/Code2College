@@ -1,5 +1,25 @@
 # 2026-2027 Code2College Project Portfolio
 
+## 3. ☀️ Sunset Cafe Website (last updated 6/19/26)
+
+**Sunset Cafe Website** is a fully responsive promotional website built for a fictional neighborhood café and bakery, designed to showcase its menu, atmosphere, and local identity through a modern, warm, and inviting interface. The site combines elegant typography, high-quality photography, and subtle animations to create the feeling of visiting a cozy brunch destination.
+
+Visitors can explore the restaurant's featured brunch dishes, bakery items, and specialty drinks through an organized menu layout, browse a gallery of food and interior photography, read customer testimonials, and quickly access business hours, location information, and online ordering. The landing page features smooth scrolling navigation to provide a polished user experience across desktop and mobile devices.
+
+The project emphasizes responsive web design, accessibility, performance optimization, and modern front-end development practices while demonstrating how a small business can establish a professional online presence using only HTML, CSS, and JavaScript.
+
+### Features
+
+* 📲 **Responsive café website** optimized for desktop, tablet, and mobile devices
+* 🥞 Beautifully organized **menu sections** featuring brunch, bakery, and drink offerings
+* 🖼️ Interactive **photo gallery** showcasing food and café atmosphere
+* ✨ Animated hero section with **parallax scrolling effects** and smooth page transitions
+* 📍 Business hours, contact information, and embedded location section for easy customer access
+* ⭐ Customer testimonial section highlighting the café experience
+* 🛒 Integrated **online ordering button** for future e-commerce compatibility
+* 🌐 Built entirely with **HTML, CSS, and JavaScript** with no frameworks or build process required
+
+
 ## 2. 👹 Runtime Escape (last updated 6/13/26)
 
 **Runtime Escape** is a browser-based dungeon crawler that transforms programming concepts into fast-paced action puzzles. Players descend through six procedurally generated worlds, each themed around a fundamental computer science topic, collecting scattered code fragments while avoiding bugs, hazards, and corrupted entities lurking throughout the system.
