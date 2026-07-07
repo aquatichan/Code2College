@@ -1,0 +1,6 @@
+requests>=2.31.0
+Jinja2>=3.1.2
+python-dotenv>=1.0.0
+# NOTE: google-generativeai is end-of-life (still works). Migrate to `google-genai`
+# in a future update; ai_enhancer.py imports the old package for now.
+google-generativeai>=0.7.0

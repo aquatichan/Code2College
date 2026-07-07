@@ -1,2 +1,7 @@
 .claude/
 .DS_Store
+.env
+EXAMPLE.*
+__pycache__/
+.venv/
+output/

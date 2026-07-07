@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolix — Studio</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>💼</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-palette="#2a78d6,#1baf7a,#eda100,#008300,#4a3aa7,#e34948,#e87ba4,#eb6834">
+  <!-- Animated line-node background -->
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">◐</button>
+
+  <main class="studio">
+    <header class="studio-head">
+      <h1>Portfolix <span class="studio-tag">Studio</span></h1>
+      <p class="studio-sub" id="loadedFor">Loading your GitHub data…</p>
+    </header>
+
+    <!-- Control panel -->
+    <section class="panel" id="controls">
+      <div class="panel-row">
+        <div class="control-group">
+          <h2>Documents</h2>
+          <p class="hint">Pick one or more to generate.</p>
+          <div class="doc-picker" id="docPicker" role="group" aria-label="Document types"></div>
+        </div>
+
+        <div class="control-group">
+          <h2>Options</h2>
+          <label class="switch">
+            <input type="checkbox" id="aiToggle" checked>
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">AI-enhanced descriptions ✨ <em id="aiState"></em></span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="beautifyToggle">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">Beautify with AI ✨ <em id="beautifyState"></em></span>
+          </label>
+          <button class="btn primary" id="generateBtn">Generate selected →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rendered documents -->
+    <section id="stage" class="stage" aria-live="polite"></section>
+  </main>
+
+  <!-- Live edit sidebar -->
+  <button class="edit-fab" id="editFab" aria-label="Open live editor" title="Live edit HTML/CSS">✎</button>
+  <aside class="editor" id="editor" aria-hidden="true">
+    <div class="editor-grip" id="editorGrip" title="Drag to resize"></div>
+    <div class="editor-head">
+      <span>Live Editor</span>
+      <div class="editor-actions">
+        <button class="btn tiny" id="editApply" title="Apply changes">Apply</button>
+        <button class="btn tiny" id="editReset" title="Revert to generated">Reset</button>
+        <button class="btn tiny ghost" id="editClose" aria-label="Close editor">✕</button>
+      </div>
+    </div>
+    <div class="editor-tabs">
+      <button class="editor-tab active" data-tab="html">HTML</button>
+      <button class="editor-tab" data-tab="css">CSS</button>
+    </div>
+    <p class="editor-target hint" id="editorTarget">Generate a document, then click it to edit.</p>
+    <textarea class="editor-area" id="editHtml" spellcheck="false" placeholder="Document HTML…"></textarea>
+    <textarea class="editor-area" id="editCss" spellcheck="false" placeholder="Document CSS…" hidden></textarea>
+  </aside>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

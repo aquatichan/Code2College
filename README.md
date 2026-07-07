@@ -6,11 +6,48 @@ This portfolio is arranged by date of project creation.
 
 | Code | Project | Type | Last Updated |
 |------|---------|------|--------------|
+| **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
 | **SC** | Sunset Cafe Website | Responsive Business Website | 6/19/26 |
 | **RE** | Runtime Escape | Educational Dungeon Crawler | 6/13/26 |
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
+
+---
+---
+---
+
+## 4. 💼 Portfolix Studio [PF]
+> **Last Updated:** 7/7/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | Portfolix |
+| **Type** | GitHub Portfolio Generator |
+| **Platform** | Web + Python CLI |
+| **Built With** | Python, HTML, CSS, JavaScript |
+
+---
+
+**Portfolix** automatically transforms a developer's public GitHub profile into professional portfolio materials using the GitHub API. A Python CLI collects repository statistics, featured projects, and language data, then generates a single JSON file powering an interactive web studio where users can create and customize portfolio websites, technical CVs, cover letters, and skills summaries.
+
+The project combines automated GitHub data collection with optional AI-enhanced writing and an in-browser editor, allowing developers to generate polished application materials without manually rebuilding them whenever their projects change.
+
+Read the full README.md for local setup/usage: [Click me!](Portfolix/README.md)
+
+### ✨ Features
+
+| | |
+|---|---|
+| 📊 | Automatically imports **GitHub repositories, languages, and project statistics** |
+| 🌐 | Generates **portfolio websites, technical CVs, cover letters, and skills sheets** from a single data source |
+| 🤖 | Optional **AI-enhanced writing** for bios, project descriptions, and application materials |
+| ✏️ | Built-in **live HTML & CSS editor** with instant preview and customization |
+| 🎨 | AI-powered **Beautify** mode for automatic themes, typography, and styling |
+| 📱 | Responsive interface with animated backgrounds and light/dark theme support |
+| 💡 | Fully static front-end powered by a generated **JSON** file with no backend required |
+| 🔄 | Easily regenerate documents anytime by rerunning the Python CLI |
+
 
 ---
 ---
@@ -114,4 +151,6 @@ As you land perfect hits, your car gradually comes alive—cycling through vibra
 | 🏆 | Local leaderboard support and persistent settings |
 | 📄 | Entire game contained in a **single HTML file** with no build process required |
 
+---
+---
 ---

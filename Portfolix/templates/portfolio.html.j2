@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ profile.name }} — Portfolio</title>
+  <meta name="description" content="{{ profile.bio|striptags }}">
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1c2128; --muted: #57606a; --card: #f6f8fa;
+      --border: #d0d7de; --accent: #0969da; --accent-soft: #ddf4ff;
+      --shadow: 0 1px 3px rgba(27,31,36,.08), 0 8px 24px rgba(27,31,36,.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --card: #161b22;
+        --border: #30363d; --accent: #58a6ff; --accent-soft: #12283d;
+        --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --card: #161b22;
+      --border: #30363d; --accent: #58a6ff; --accent-soft: #12283d;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff; --fg: #1c2128; --muted: #57606a; --card: #f6f8fa;
+      --border: #d0d7de; --accent: #0969da; --accent-soft: #ddf4ff;
+      --shadow: 0 1px 3px rgba(27,31,36,.08), 0 8px 24px rgba(27,31,36,.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    header { padding: 64px 0 40px; text-align: center; }
+    .avatar {
+      width: 128px; height: 128px; border-radius: 50%;
+      border: 3px solid var(--border); object-fit: cover; box-shadow: var(--shadow);
+    }
+    h1 { font-size: 2.25rem; margin: 20px 0 4px; letter-spacing: -.02em; }
+    .bio { font-size: 1.15rem; color: var(--muted); max-width: 640px; margin: 8px auto 0; }
+    .meta { color: var(--muted); font-size: .95rem; margin-top: 14px; }
+    .meta span { margin: 0 8px; white-space: nowrap; }
+    .links { margin-top: 20px; }
+    .links a {
+      display: inline-block; margin: 4px; padding: 8px 16px;
+      border: 1px solid var(--border); border-radius: 999px; color: var(--fg);
+      background: var(--card); font-size: .9rem; transition: .15s;
+    }
+    .links a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+    /* Stats */
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px; margin: 32px 0;
+    }
+    .stat {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px; text-align: center;
+    }
+    .stat .num { font-size: 1.8rem; font-weight: 700; letter-spacing: -.02em; }
+    .stat .label { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* Section headings */
+    section { margin: 48px 0; }
+    h2 { font-size: 1.4rem; margin: 0 0 18px; letter-spacing: -.01em; }
+
+    /* Language bar */
+    .langbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+    .langbar > span { display: block; height: 100%; }
+    .langlegend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; font-size: .9rem; }
+    .langlegend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .langlegend .pct { color: var(--muted); margin-left: 4px; }
+
+    /* Project cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; display: flex; flex-direction: column; transition: .15s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--accent); }
+    .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+    .card p { margin: 0 0 14px; color: var(--muted); font-size: .95rem; flex: 1; }
+    .card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .tag { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+    .card .foot { display: flex; align-items: center; gap: 16px; font-size: .85rem; color: var(--muted); }
+    .card .foot .lang .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+    .card .homepage { margin-left: auto; }
+
+    /* Theme toggle */
+    .toggle {
+      position: fixed; top: 16px; right: 16px; z-index: 10;
+      background: var(--card); border: 1px solid var(--border); color: var(--fg);
+      border-radius: 999px; width: 40px; height: 40px; cursor: pointer; font-size: 1.1rem;
+    }
+
+    footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 40px 0 60px; }
+  </style>
+</head>
+<body>
+  <button class="toggle" id="themeToggle" aria-label="Toggle theme">◐</button>
+
+  <div class="wrap">
+    <header>
+      {% if profile.avatar_url %}<img class="avatar" src="{{ profile.avatar_url }}" alt="{{ profile.name }}">{% endif %}
+      <h1>{{ profile.name }}</h1>
+      {% if profile.bio %}<p class="bio">{{ profile.bio }}</p>{% endif %}
+      <div class="meta">
+        {% if profile.company %}<span>🏢 {{ profile.company }}</span>{% endif %}
+        {% if profile.location %}<span>📍 {{ profile.location }}</span>{% endif %}
+      </div>
+      <div class="links">
+        <a href="{{ profile.html_url }}" target="_blank" rel="noopener">GitHub</a>
+        {% if profile.blog %}<a href="{{ profile.blog }}" target="_blank" rel="noopener">Website</a>{% endif %}
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat"><div class="num">{{ profile.public_repos }}</div><div class="label">Repos</div></div>
+      <div class="stat"><div class="num">{{ d.total_stars }}</div><div class="label">Stars</div></div>
+      <div class="stat"><div class="num">{{ d.total_forks }}</div><div class="label">Forks</div></div>
+      <div class="stat"><div class="num">{{ profile.followers }}</div><div class="label">Followers</div></div>
+      {% if d.contributions is not none %}
+      <div class="stat"><div class="num">{{ d.contributions }}</div><div class="label">Contributions/yr</div></div>
+      {% endif %}
+    </div>
+
+    {% if d.languages %}
+    <section>
+      <h2>Languages</h2>
+      <div class="langbar">
+        {% for lang, pct in d.languages[:8] %}
+        <span style="width: {{ pct }}%; background: {{ lang|lang_color }};" title="{{ lang }} {{ pct }}%"></span>
+        {% endfor %}
+      </div>
+      <div class="langlegend">
+        {% for lang, pct in d.languages[:8] %}
+        <span><span class="dot" style="background: {{ lang|lang_color }}"></span>{{ lang }}<span class="pct">{{ pct }}%</span></span>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if d.pinned %}
+    <section>
+      <h2>Featured Projects</h2>
+      <div class="grid">
+        {% for r in d.pinned %}
+        <div class="card">
+          <h3><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.name }}</a></h3>
+          <p>{{ r.ai_summary or r.description or "No description provided." }}</p>
+          {% if r.topics %}
+          <div class="tags">{% for t in r.topics[:5] %}<span class="tag">{{ t }}</span>{% endfor %}</div>
+          {% endif %}
+          <div class="foot">
+            {% if r.language %}<span class="lang"><span class="dot" style="background: {{ r.language|lang_color }}"></span>{{ r.language }}</span>{% endif %}
+            <span>★ {{ r.stars }}</span>
+            {% if r.homepage %}<a class="homepage" href="{{ r.homepage }}" target="_blank" rel="noopener">Live ↗</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <footer>
+    Generated by <strong>Portfolix</strong> on {{ generated_on }} · Data from GitHub
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var saved = localStorage.getItem("portfolix-theme");
+      if (saved) root.setAttribute("data-theme", saved);
+      document.getElementById("themeToggle").addEventListener("click", function () {
+        var isDark = getComputedStyle(document.body).backgroundColor === "rgb(13, 17, 23)"
+          || root.getAttribute("data-theme") === "dark";
+        var next = isDark ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        localStorage.setItem("portfolix-theme", next);
+      });
+    })();
+  </script>
+</body>
+</html>
