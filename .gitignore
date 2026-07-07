@@ -1,7 +1,10 @@
+.vscode/
 .claude/
-.DS_Store
 .env
-EXAMPLE.*
-__pycache__/
 .venv/
+__pycache__/
+.pytest_cache/
 output/
+.DS_Store
+*.egg-info/
+.eggs/

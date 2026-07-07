@@ -6,6 +6,7 @@ This portfolio is arranged by date of project creation.
 
 | Code | Project | Type | Last Updated |
 |------|---------|------|--------------|
+| **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
 | **SC** | Sunset Cafe Website | Responsive Business Website | 6/19/26 |
 | **RE** | Runtime Escape | Educational Dungeon Crawler | 6/13/26 |
@@ -17,7 +18,42 @@ This portfolio is arranged by date of project creation.
 ---
 ---
 
-## 4. 💼 Portfolix Studio [PF]
+## 5. 📈📉 DirDelta [DD]
+> **Last Updated:** 7/7/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | DirDelta |
+| **Type** | Directory Comparison CLI |
+| **Platform** | Python CLI |
+| **Built With** | Python Standard Library |
+
+---
+
+**DirDelta** is a command-line directory comparison tool that recursively analyzes two directory trees and generates a clean, structured change report. It classifies files as **Added**, **Removed**, **Modified**, or **Unchanged** using SHA-256 content verification, while supporting unified diffs, ignore patterns, and JSON exports for automation workflows.
+
+Designed for engineering workflows like backup verification, deployment auditing, and release comparisons, DirDelta prioritizes accurate file analysis, low-noise reporting, and easy integration into scripts or CI pipelines.
+
+Read the full README.md for local setup/usage: [Click me!](dirdelta/README.md)
+
+### ✨ Features
+
+| | |
+|---|---|
+| 🔍 | Recursively compares **entire directory trees** and matches files by relative path |
+| 🔐 | Uses **SHA-256 hashing** for content-accurate modification detection |
+| 📂 | Classifies files into **Added, Removed, Modified, and Unchanged** categories |
+| 📝 | Generates optional **unified text diffs** while automatically detecting binary files |
+| 🚫 | Supports built-in and custom **ignore patterns** for filtering unnecessary files |
+| 📊 | Provides detailed **summary statistics** including extension breakdowns |
+| 📄 | Exports complete comparison reports as **machine-readable JSON** |
+| 🐍 | Zero dependencies — built entirely with the **Python standard library** |
+
+---
+---
+---
+
+## 4. 💼 Portfolix [PF]
 > **Last Updated:** 7/7/26
 
 | Category | Information |
@@ -33,7 +69,7 @@ This portfolio is arranged by date of project creation.
 
 The project combines automated GitHub data collection with optional AI-enhanced writing and an in-browser editor, allowing developers to generate polished application materials without manually rebuilding them whenever their projects change.
 
-Read the full README.md for local setup/usage: [Click me!](Portfolix/README.md)
+Read the full README.md for local setup/usage: [Click me!](portfolix/README.md)
 
 ### ✨ Features
 

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dirdelta"
+version = "0.1.0"
+description = "A command-line directory comparison utility that produces organized change reports."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Aaron Qin" }]
+keywords = ["cli", "diff", "directory", "comparison", "sha256"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+
+# DirDelta uses only the Python standard library. No runtime dependencies.
+dependencies = []
+
+[project.optional-dependencies]
+# Development-only tooling. Install with:  pip install -e ".[dev]"
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+dirdelta = "dirdelta.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/aquatichan/Code2College/tree/main/dirdelta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
