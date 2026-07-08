@@ -69,7 +69,7 @@ Read the full README.md for local setup/usage: [Click me!](dirdelta/README.md)
 
 The project combines automated GitHub data collection with optional AI-enhanced writing and an in-browser editor, allowing developers to generate polished application materials without manually rebuilding them whenever their projects change.
 
-Read the full README.md for local setup/usage: [Click me!](portfolix/README.md)
+Read the full README.md for local setup/usage: [Click me!](Portfolix/README.md)
 
 ### ✨ Features
 
