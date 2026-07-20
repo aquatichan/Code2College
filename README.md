@@ -10,7 +10,7 @@ This portfolio is arranged by date of project creation.
 | **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
 | **SC** | Sunset Cafe Website | Responsive Business Website | 6/19/26 |
-| **RE** | Runtime Escape | Educational Dungeon Crawler | 6/13/26 |
+| **RE** | Runtime Escape | Educational Dungeon Crawler | 7/20/26 |
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
