@@ -990,7 +990,7 @@ async function submitFinal(secs,acc,won){const payload={score:Math.max(0,Math.ro
   catch(e){console.warn('Failed to submit score:',e);}
   renderLeaderboard(hs,payload.score);}
 function renderLeaderboard(scores,myScore){if(!scores||!scores.length){
-  ui.leaderboard.innerHTML='<div class="lb-note">Standalone mode — scores save inside HireWheel.<br>Your score: <b style="color:var(--gold)">'+myScore.toLocaleString()+'</b></div>';return;}
+  ui.leaderboard.innerHTML='<div class="lb-note">Standalone mode — scores save inside Hirewheel.<br>Your score: <b style="color:var(--gold)">'+myScore.toLocaleString()+'</b></div>';return;}
   ui.leaderboard.innerHTML=scores.slice(0,8).map(s=>'<div class="lb-row'+(s.is_current_user?' me':'')+'">'+
     '<span class="lb-rank">'+s.rank+'</span><span class="lb-name">'+(s.player_name||'—')+'</span>'+
     '<span class="lb-score">'+(s.score).toLocaleString()+'</span></div>').join('');}

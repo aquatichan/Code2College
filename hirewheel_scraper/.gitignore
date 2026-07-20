@@ -1,0 +1,13 @@
+# Playwright persistent browser profile (contains the logged-in session — never commit)
+.pw_profile/
+
+# Local scrape data: snapshots, screenshots, logs
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+preview_demo.py

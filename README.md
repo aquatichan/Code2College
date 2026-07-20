@@ -1,11 +1,12 @@
 # 2026-2027 Code2College Project Portfolio
 
-## A. 📋 Index
+## 📋 Index
 
 This portfolio is arranged by date of project creation.
 
 | Code | Project | Type | Last Updated |
 |------|---------|------|--------------|
+| **HS** | Hirewheel Scraper | Student Opportunity Scraper | 7/20/26 |
 | **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
 | **SC** | Sunset Cafe Website | Responsive Business Website | 6/19/26 |
@@ -13,6 +14,41 @@ This portfolio is arranged by date of project creation.
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
+
+---
+---
+---
+
+## 6. 🧑‍💻 Hirewheel Scraper [HS]
+> **Last Updated:** 7/20/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | Hirewheel Scraper |
+| **Type** | Student Opportunity Scraper |
+| **Platform** | Python Desktop Application |
+| **Built With** | Python, Playwright, Tkinter |
+
+---
+
+**Hirewheel Scraper** is a desktop monitoring tool built for **Code2College students** that continuously watches important Hirewheel pages and alerts users whenever new opportunities appear. Instead of repeatedly checking the portal manually, it performs periodic scans, compares each page against previous snapshots, and displays only newly added, changed, or removed content.
+
+Using a persistent Playwright browser session, the scraper securely reuses the user's own authenticated login (including MFA) without storing credentials. A built-in Tkinter dashboard groups detected changes by page and displays screenshots of each modified page, making it easy to review internship opportunities, marketplace projects, surveys, notifications, events, and news at a glance.
+
+Read the full README.md for local setup/usage: **[Click me!](hirewheel_scraper/README.md)**
+
+### ✨ Features
+
+| | |
+|---|---|
+| 👀 | Automatically monitors **11 Hirewheel pages** including Notifications, Marketplace, Newsfeed, Surveys, Events, Learning Modules, etc. |
+| 🔐 | Uses a real **Playwright browser session** so credentials and MFA remain handled by Hirewheel |
+| 🔄 | Performs background scans every **3 hours**, automatically comparing each page against previous snapshots |
+| 📌 | Detects **added, changed, and removed** content using stable HTML identifiers for highly accurate diffs |
+| 🖼️ | Displays an interactive **Tkinter desktop dashboard** with inline screenshots for every changed page |
+| 💾 | Stores per-page JSON snapshots locally to efficiently track historical changes |
+| 🚀 | Runs headlessly after the initial login with virtually no user interaction required |
+| 🧪 | Includes extractor and pipeline tests covering **all 11 page extractors** for reliable monitoring |
 
 ---
 ---
