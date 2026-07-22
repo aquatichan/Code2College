@@ -6,6 +6,7 @@ This portfolio is arranged by date of project creation.
 
 | Code | Project | Type | Last Updated |
 |------|---------|------|--------------|
+| **EX** | MathEXplained Discord Bot [v1] | Community Discord Bot | 7/22/26 |
 | **HS** | Hirewheel Scraper | Student Opportunity Scraper | 7/20/26 |
 | **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
@@ -14,6 +15,45 @@ This portfolio is arranged by date of project creation.
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
+
+---
+---
+---
+
+## 7. 🤖 MathEXplained Discord Bot [EX]
+> **Last Updated:** 7/22/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | MathEXplained Discord Bot |
+| **Type** | Community Discord Bot |
+| **Platform** | Discord Bot |
+| **Built With** | Python, Discord.py, SQLite3, CodeCogs LaTeX API |
+
+---
+
+The **MathEXplained Discord Bot** is a feature-rich Discord application built for the **MathEXplained Magazine** community, providing a centralized platform for collaborative problem solving, competitive math challenges, contributor workflows, and community management.
+
+The bot transforms a traditional Discord server into an interactive mathematics environment by combining a crowdsourced problem database, real-time multiplayer math duels, AI-powered opponents, moderator review systems, mathematical rendering tools, leaderboards, and automated moderation.
+
+Designed with a modular architecture, each major feature is separated into independent components with dedicated SQLite databases, allowing the bot to remain maintainable and easily expandable as MathEXplained grows.
+
+Read the full README.md: **[Click me!](mathexplained-discord-bot/README.md)**
+
+### ✨ Features
+
+| | |
+|---|---|
+| 📚 | Maintains a **community-submitted mathematics problem database** with categories, difficulty ratings, images, LaTeX support, contributors, and approval workflows |
+| ⚔️ | Provides **live multiplayer math duels** where users compete against each other or AI opponents across configurable difficulty levels |
+| 📝 | Implements a complete **moderator review pipeline** allowing staff to approve, reject, edit, and manage submissions directly through Discord |
+| 🏆 | Tracks persistent **duel statistics and leaderboards** including wins, losses, and player rankings |
+| ✏️ | Automatically renders **LaTeX expressions into high-resolution images** for problems, submissions, and mathematical explanations |
+| 📐 | Includes infrastructure for **Asymptote diagram rendering** for future advanced geometry support |
+| 🛡️ | Provides automated **anti-spam moderation** with offense logging, user actions, and moderator review tools |
+| 📊 | Offers database analytics and statistics for monitoring problem contributions and community activity |
+| 💬 | Includes built-in feedback reporting and issue submission workflows for continuous improvement |
+| 🖥️ | Uses Discord's modern interaction framework with **slash commands, buttons, modals, embeds, and ephemeral responses** for a seamless user experience |
 
 ---
 ---
