@@ -1,0 +1,289 @@
+/* Fragrance card.
+   Teal is an accent here, not a background fill - the bottle and the name
+   carry the card, and the data reads as a profile rather than a dashboard. */
+
+.fragrance-card {
+  --ink: #141b1d;
+  --muted: #6b7c82;
+  --hairline: #e6ebec;
+  --accent: #0f7d8d;
+  --accent-soft: #e8f2f3;
+
+  --display:
+    ui-serif, "New York", "Iowan Old Style", Georgia, Cambria, serif;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+
+  background: #fff;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(20, 27, 29, 0.06),
+    0 12px 32px rgba(20, 27, 29, 0.1);
+  padding: clamp(22px, 3.4vw, 44px);
+  margin: 0 0 2.5rem;
+  color: var(--ink);
+  font-family: var(--sans);
+  text-align: left;
+}
+
+/* ---------- Header ---------- */
+
+.fc-header {
+  display: grid;
+  grid-template-columns: minmax(150px, 232px) 1fr;
+  gap: clamp(20px, 3.5vw, 44px);
+  align-items: center;
+}
+
+.fc-bottle-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 5;
+  /* a soft vignette so a transparent bottle has something to sit on */
+  background: radial-gradient(
+    ellipse at 50% 62%,
+    #f2f5f6 0%,
+    #fbfcfc 58%,
+    #fff 100%
+  );
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.fc-bottle {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.fc-bottle-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.fc-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.fc-brand {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.fc-name {
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 3.6vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 0;
+  color: var(--ink);
+}
+
+.fc-subtitle {
+  font-size: 0.94rem;
+  color: var(--muted);
+  margin: 10px 0 0;
+}
+
+.fc-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+.fc-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fc-fact-value {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-fact-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fc-buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.fc-buy:hover {
+  background: #0b6774;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.fc-buy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.fc-provenance {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 14px 0 0;
+}
+
+/* ---------- Sections ---------- */
+
+.fc-section {
+  margin-top: clamp(28px, 4vw, 44px);
+  padding-top: clamp(20px, 3vw, 30px);
+  border-top: 1px solid var(--hairline);
+}
+
+.fc-section-title {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 22px;
+}
+
+.fc-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+}
+
+.fc-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(18px, 2.5vw, 36px);
+  align-items: start;
+}
+
+.fc-panel {
+  min-width: 0;
+}
+
+.fc-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+/* ---------- How it wears ---------- */
+
+.fc-wear-stat {
+  min-width: 0;
+}
+
+.fc-wear-value {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.fc-wear-detail {
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin: 5px 0 0;
+}
+
+/* ---------- Chips and empty states ---------- */
+
+.fc-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fc-chip {
+  background: var(--accent-soft);
+  color: #0b6774;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 0.84rem;
+}
+
+.fc-empty {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+  .fc-duo,
+  .fc-trio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fc-trio {
+    gap: 22px;
+  }
+}
+
+@media (max-width: 620px) {
+  .fc-header {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+
+  .fc-bottle-frame {
+    width: min(70%, 220px);
+  }
+
+  .fc-identity {
+    align-items: center;
+  }
+
+  .fc-facts {
+    justify-content: center;
+  }
+}

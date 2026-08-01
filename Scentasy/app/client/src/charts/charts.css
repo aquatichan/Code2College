@@ -1,0 +1,106 @@
+/* SVG chart styling for the fragrance card. */
+
+.chart-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radar-chart,
+.ranking-chart,
+.notes-pack-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.radar-chart,
+.notes-pack-svg {
+  max-width: 440px;
+}
+
+/* Radar */
+.radar-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.notes-pack-label {
+  fill: #fff;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Horizontal ranking bars */
+.bar-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.bar-value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared legend / scale strip beneath a chart */
+.chart-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.74rem;
+  color: #6b7c82;
+}
+
+.chart-scale-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-scale-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #0f7d8d;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+/* People rating */
+.people-rating {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.people-rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.person-glyph {
+  width: 22px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.person-glyph.is-filled {
+  fill: #0f7d8d;
+}
+
+.person-glyph.is-empty {
+  fill: #ccd8da;
+}
+
+.people-rating-text {
+  font-size: 0.86rem;
+  color: #6b7c82;
+  margin: 0;
+}
+
+.people-rating-text strong {
+  color: #141b1d;
+  font-weight: 600;
+}

@@ -1,18 +1,20 @@
-# 2026-2027 Code2College Project Portfolio
+# Code2College Project Portfolio
 
 ## 📋 Index
 
 This portfolio is arranged by date of project creation.
 
-| Code | Project | Type | Last Updated |
+| Code | Project | Type | Date Created |
 |------|---------|------|--------------|
 | **EX** | MathEXplained Discord Bot [v1] | Community Discord Bot | 7/22/26 |
 | **HS** | Hirewheel Scraper | Student Opportunity Scraper | 7/20/26 |
 | **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
-| **SC** | Sunset Cafe Website | Responsive Business Website | 6/19/26 |
+| **SC** | [Sunset Cafe Website](https://sunrise-cafe-c2c.netlify.app/) | Responsive Business Website | 6/19/26 |
 | **RE** | Runtime Escape | Educational Dungeon Crawler | 7/20/26 |
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
+| **PB** | Premier Banking | CLI Banking System | 4/23/26 |
+| **SY** | Scentasy | Fragrance Discovery Platform | 3/24/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
 
@@ -20,7 +22,7 @@ This portfolio is arranged by date of project creation.
 ---
 ---
 
-## 7. 🤖 MathEXplained Discord Bot [EX]
+## 🤖 MathEXplained Discord Bot [EX]
 > **Last Updated:** 7/22/26
 
 | Category | Information |
@@ -59,7 +61,7 @@ Read the full README.md: **[Click me!](mathexplained-discord-bot/README.md)**
 ---
 ---
 
-## 6. 🧑‍💻 Hirewheel Scraper [HS]
+## 🧑‍💻 Hirewheel Scraper [HS]
 > **Last Updated:** 7/20/26
 
 | Category | Information |
@@ -94,7 +96,7 @@ Read the full README.md for local setup/usage: **[Click me!](hirewheel_scraper/R
 ---
 ---
 
-## 5. 📈📉 DirDelta [DD]
+## 📈📉 DirDelta [DD]
 > **Last Updated:** 7/7/26
 
 | Category | Information |
@@ -129,7 +131,7 @@ Read the full README.md for local setup/usage: [Click me!](dirdelta/README.md)
 ---
 ---
 
-## 4. 💼 Portfolix [PF]
+## 💼 Portfolix [PF]
 > **Last Updated:** 7/7/26
 
 | Category | Information |
@@ -165,14 +167,14 @@ Read the full README.md for local setup/usage: [Click me!](Portfolix/README.md)
 ---
 ---
 
-## 3. ☀️ Sunset Cafe Website [SC]
+## ☀️ Sunset Cafe Website [SC]
 > **Last Updated:** 6/19/26
 
 | Category | Information |
 |-----------|-------------|
 | **Project** | Sunset Cafe Website |
 | **Type** | Responsive Business Website |
-| **Platform** | Web |
+| **Platform** | Web @ https://sunrise-cafe-c2c.netlify.app/ |
 | **Built With** | HTML, CSS, JavaScript |
 
 ---
@@ -199,8 +201,8 @@ The project emphasizes responsive web design, accessibility, performance optimiz
 ---
 ---
 
-## 2. 👹 Runtime Escape [RE]
-> **Last Updated:** 6/13/26
+## 👹 Runtime Escape [RE]
+> **Last Updated:** 7/20/26
 
 | Category | Information |
 |-----------|-------------|
@@ -233,7 +235,7 @@ The game blends arcade gameplay with educational themes, presenting coding ideas
 ---
 ---
 
-## 1. 🎵 MP3'd [M3]
+## 🎵 MP3'd [M3]
 > **Last Updated:** 6/11/26
 
 | Category | Information |
@@ -262,6 +264,76 @@ As you land perfect hits, your car gradually comes alive—cycling through vibra
 | 🎮 | Multiple car models, difficulty settings, and customizable controls |
 | 🏆 | Local leaderboard support and persistent settings |
 | 📄 | Entire game contained in a **single HTML file** with no build process required |
+
+---
+---
+---
+
+## 🦁 Premier Banking [PB]
+> **Last Updated:** 8/1/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | Premier Banking |
+| **Type** | CLI Banking System |
+| **Platform** | Python CLI |
+| **Built With** | Python 3.12, SQLite3 |
+
+---
+
+**Premier Banking** is a command-line banking application that simulates core financial operations through a secure, menu-driven interface. Designed as the capstone project for the **Code2College Elite102 Banking App Project**, it enables users to create accounts, manage balances, transfer funds, and review transaction history while persisting all data in a relational SQLite database.
+
+Built using Python and SQLite, the application emphasizes clean software architecture, object-oriented programming, and database design. Comprehensive input validation, transaction logging, and a suite of automated unit tests ensure reliable banking operations and data integrity.
+
+Read the full README.md for local setup/usage: **[Click me!](Elite102-Premier-Banking/README.md)**
+
+### ✨ Features
+
+| | |
+|---|---|
+| 🏦 | Create and manage multiple **bank accounts** with persistent SQLite storage |
+| 💸 | Perform **deposits, withdrawals, balance inquiries, and fund transfers** through an interactive CLI |
+| 🧾 | Automatically records every transaction with **timestamps, balances, and transaction types** |
+| 🔄 | Supports **inter-account transfers** while maintaining transactional consistency |
+| 🛡️ | Includes robust **input validation and error handling** for invalid accounts, insufficient funds, and malformed inputs |
+| 💾 | Stores account and transaction data in a **relational SQLite database** with foreign key relationships |
+| 🧪 | Features a comprehensive **25-test unit test suite** covering all major banking operations |
+| 🚀 | Built with a modular architecture using **Python OOP principles**, separating business logic, database operations, and data models |
+
+---
+---
+---
+
+## 🌅 Scentasy [SY]
+> **Last Updated:** 8/1/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | Scentasy |
+| **Type** | Fragrance Discovery Platform |
+| **Platform** | Full-Stack Web Application |
+| **Built With** | React, Vite, Express.js, Node.js |
+
+---
+
+**Scentasy** is a full-stack fragrance discovery platform that helps users understand how a perfume actually performs beyond a typical product listing. Instead of simply displaying notes and marketing descriptions, it visualizes fragrance accords, note pyramids, seasonal versatility, occasion rankings, and real-world longevity in an interactive dashboard.
+
+Built with a React frontend and an Express backend, the application securely proxies requests to the Fragella API so the API key never reaches the browser. Custom SVG visualizations—including a radar chart for fragrance accords and a packed-circle note pyramid—transform raw fragrance data into an intuitive, interactive experience.
+
+Read the full README.md for local setup/usage: **[Click me!](Scentasy/README.md)**
+
+### ✨ Features
+
+| | |
+|---|---|
+| 🔍 | Search thousands of fragrances by name using the **Fragella API** |
+| 🔐 | Protects the **Fragella API key** by routing all requests through a secure Express backend |
+| 📊 | Visualizes fragrance **accord strengths** using a custom-built interactive radar chart |
+| 🌸 | Displays the complete **note pyramid** as a packed-circle visualization based on fragrance tiers |
+| ☀️ | Shows **seasonal performance** and **occasion suitability** through intuitive ranking charts |
+| ⏳ | Highlights **real-world longevity** and community ratings to better predict wear performance |
+| 🎨 | Uses handcrafted **SVG visualizations** instead of traditional charting libraries for a lightweight, highly customized interface |
+| 🚀 | Built with **React 19 + Vite** for a fast, responsive user experience with a secure Express API backend |
 
 ---
 ---
