@@ -11,7 +11,7 @@ This portfolio is arranged by date of project creation.
 | **DD** | DirDelta | Directory Comparison CLI | 7/7/26 |
 | **PF** | Portfolix Studio | GitHub Portfolio Generator | 7/7/26 |
 | **SC** | [Sunset Cafe Website](https://sunrise-cafe-c2c.netlify.app/) | Responsive Business Website | 6/19/26 |
-| **RE** | Runtime Escape | Educational Dungeon Crawler | 7/20/26 |
+| **RE** | Runtime Escape | Educational Dungeon Crawler | 6/13/26 |
 | **M3** | MP3'd | 3D Synthwave Rhythm Game | 6/11/26 |
 | **PB** | Premier Banking | CLI Banking System | 4/23/26 |
 | **SY** | Scentasy | Fragrance Discovery Platform | 3/24/26 |
