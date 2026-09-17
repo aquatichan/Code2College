@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/
+*.db
+*.db-wal
+*.db-shm
+.env
+# APNs auth keys are account-wide credentials — never commit one.
+*.p8
