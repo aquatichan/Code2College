@@ -111,68 +111,12 @@ def test_api_end_to_end():
         muted = client.patch("/devices/me", json={"muted_pages": ["news"]}, headers=auth).json()
         assert muted["muted_pages"] == ["news"]
         assert client.get("/me", headers=auth).json()["muted_pages"] == ["news"]
-        assert client.patch("/me/interval", json={"interval_seconds": 60}, headers=auth).status_code == 400
-
-        # 24h is the standard interval and always allowed.
-        day = 24 * 3600
-        assert client.patch(
-            "/me/interval", json={"interval_seconds": day}, headers=auth
-        ).json() == {"interval_seconds": day}
-
-        # Everything faster is a paid feature. The app hides these, but hiding a
-        # button isn't a restriction — the API has to refuse them too.
-        for seconds in (3600, 3 * 3600, 6 * 3600, 12 * 3600):
-            resp = client.patch("/me/interval", json={"interval_seconds": seconds}, headers=auth)
-            assert resp.status_code == 402, f"{seconds}s should need payment, got {resp.status_code}"
-
-        # ...and become allowed once the matching purchase is recorded.
-        db.record_purchase(
-            api.conn(),
-            user_id,
-            product_id="com.aaronqin.HirewheelWatch.interval6h",
-            original_transaction_id="2000000001",
-            interval_seconds=6 * 3600,
-            purchased_at="2026-01-01T00:00:00+00:00",
-            signature_verified=True,
-            revoked=False,
-        )
-        assert client.patch(
-            "/me/interval", json={"interval_seconds": 6 * 3600}, headers=auth
-        ).json() == {"interval_seconds": 6 * 3600}
-
-        # Purchases are independent: 6h unlocks 6h and nothing else — not the
-        # faster tiers, and not the slower paid one either.
-        for other in (3600, 3 * 3600, 12 * 3600):
-            assert client.patch(
-                "/me/interval", json={"interval_seconds": other}, headers=auth
-            ).status_code == 402, f"{other}s should still be locked"
-
-        owned = client.get("/purchases", headers=auth).json()
-        assert owned["unlocked_interval_seconds"] == [6 * 3600, day]
-        assert owned["purchases"][0]["product_id"].endswith("interval6h")
-
-        # A refund gives the entitlement back.
-        db.record_purchase(
-            api.conn(),
-            user_id,
-            product_id="com.aaronqin.HirewheelWatch.interval6h",
-            original_transaction_id="2000000001",
-            interval_seconds=6 * 3600,
-            purchased_at="2026-01-01T00:00:00+00:00",
-            signature_verified=True,
-            revoked=True,
-        )
-        assert client.get("/me", headers=auth).json()["unlocked_interval_seconds"] == [day]
-
-        # Garbage never becomes an entitlement.
-        assert client.post("/purchases", json={"jws": "not-a-token"}, headers=auth).status_code == 400
-
-        db.set_interval(api.conn(), user_id, None)
-
+        # Every account scans on the same fixed cadence; there is no way to change it.
         profile = client.get("/me", headers=auth).json()
-        assert profile["free_min_interval_seconds"] == day
-        assert len(profile["products"]) == 4
+        assert profile["interval_seconds"] == 3 * 3600
         assert "email" in profile
+        assert client.patch("/me/interval", json={"interval_seconds": 3600}, headers=auth).status_code in (404, 405)
+        assert client.get("/purchases", headers=auth).status_code in (404, 405)
 
         assert client.post("/scan-now", headers=auth).json() == {"status": "queued"}
 

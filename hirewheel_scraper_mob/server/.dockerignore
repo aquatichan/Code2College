@@ -1,0 +1,11 @@
+# Keep local state and secrets out of the build context entirely — anything
+# listed here is never uploaded to a remote builder.
+data/
+.env
+*.p8
+*.db
+*.db-*
+nohup.out
+__pycache__/
+.venv/
+venv/

@@ -13,7 +13,7 @@ struct Session: Sendable, Equatable {
 }
 
 enum SessionStore {
-    private static let service = "com.aaronqin.HirewheelWatch"
+    private static let service = "com.aaronqin.hirewatch"
     private static let tokenAccount = "deviceToken"
     private static let baseURLKey = "hw.baseURL"
 
@@ -37,7 +37,7 @@ enum SessionStore {
     /// Reinstalling a build clears the Keychain, which otherwise means retyping
     /// the server address and invite code on every run. Launch with:
     ///
-    ///     xcrun simctl launch <device> com.aaronqin.HirewheelWatch \
+    ///     xcrun simctl launch <device> com.aaronqin.hirewatch \
     ///         --setenv HW_DEV_BASE_URL=http://localhost:8000 \
     ///         --setenv HW_DEV_TOKEN=<a device token from the server>
     ///

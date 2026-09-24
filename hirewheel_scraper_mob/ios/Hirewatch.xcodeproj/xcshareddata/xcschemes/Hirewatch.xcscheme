@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "1A0000000000000000000002"
-               BuildableName = "HirewheelWatch.app"
-               BlueprintName = "HirewheelWatch"
-               ReferencedContainer = "container:HirewheelWatch.xcodeproj">
+               BuildableName = "Hirewatch.app"
+               BlueprintName = "Hirewatch"
+               ReferencedContainer = "container:Hirewatch.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,14 +45,11 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A0000000000000000000002"
-            BuildableName = "HirewheelWatch.app"
-            BlueprintName = "HirewheelWatch"
-            ReferencedContainer = "container:HirewheelWatch.xcodeproj">
+            BuildableName = "Hirewatch.app"
+            BlueprintName = "Hirewatch"
+            ReferencedContainer = "container:Hirewatch.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <StoreKitConfigurationFileReference
-         identifier = "../../Products.storekit">
-      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -65,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A0000000000000000000002"
-            BuildableName = "HirewheelWatch.app"
-            BlueprintName = "HirewheelWatch"
-            ReferencedContainer = "container:HirewheelWatch.xcodeproj">
+            BuildableName = "Hirewatch.app"
+            BlueprintName = "Hirewatch"
+            ReferencedContainer = "container:Hirewatch.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

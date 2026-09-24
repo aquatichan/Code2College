@@ -29,24 +29,8 @@ final class AppState {
 
     private static let appearanceKey = "hw.appearance"
 
-    let store = Store()
-
     var client: APIClient? {
         session.map { APIClient(session: $0) }
-    }
-
-    /// Forward every entitlement Apple reports, then re-read what the server
-    /// decided — the server's answer is the one that governs.
-    func syncEntitlements(_ signedTransactions: [String]) async {
-        guard let client else { return }
-        for jws in signedTransactions {
-            do {
-                try await client.recordPurchase(jws: jws)
-            } catch {
-                print("[store] server rejected a purchase: \(error.localizedDescription)")
-            }
-        }
-        me = try? await client.me()
     }
 
     init() {
@@ -74,9 +58,23 @@ final class AppState {
         let new = Session(baseURL: baseURL, deviceToken: deviceToken)
         SessionStore.save(new)
         session = new
-        showingSignIn = false
+        // Keep the sheet up: the next step is signing in to Hirewheel, and that
+        // is what links this phone back to any existing history.
     }
 
+    /// Sign this phone out. The account and its scans stay on the server, so
+    /// signing back in with the same Hirewheel email brings them back.
+    func signOutOfDevice() async {
+        if let client {
+            // Best-effort: even if the server is unreachable, the user asked to
+            // leave, so the local sign-out still happens.
+            _ = try? await client.signOutDevice()
+        }
+        signOut()
+    }
+
+    /// Forget the session locally. Used directly when the server has already
+    /// rejected our token.
     func signOut() {
         SessionStore.clear()
         session = nil

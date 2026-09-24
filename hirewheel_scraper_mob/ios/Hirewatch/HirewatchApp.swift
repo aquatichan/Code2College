@@ -3,7 +3,7 @@ import UIKit
 import UserNotifications
 
 @main
-struct HirewheelWatchApp: App {
+struct HirewatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @Environment(\.scenePhase) private var scenePhase
     @State private var app = AppState()
@@ -32,10 +32,6 @@ struct HirewheelWatchApp: App {
                     AppDelegate.onPushToken = { token in
                         Task { await app.registerPushToken(token) }
                     }
-                    app.store.onEntitlementsChanged = { signed in
-                        await app.syncEntitlements(signed)
-                    }
-                    await app.store.load()
                     if app.session != nil {
                         _ = await NotificationManager.shared.requestAuthorization()
                     }

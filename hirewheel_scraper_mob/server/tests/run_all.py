@@ -10,13 +10,14 @@ MODULES = [
     "tests.test_extractors",
     "tests.test_notifications",
     "tests.test_auth",
+    "tests.test_accounts",
     "tests.test_children",
     "tests.test_profile",
-    "tests.test_appstore",
     "tests.test_db",
     "tests.test_pipeline",
     "tests.test_push",
     "tests.test_api",
+    "tests.test_hosting",
 ]
 
 if __name__ == "__main__":

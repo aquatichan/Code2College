@@ -12,7 +12,8 @@ import Foundation
 /// Once `Me.remotePush` is true, this stops posting notifications and just keeps
 /// the local "last seen" marker fresh, so the two paths never double-notify.
 enum BackgroundRefresh {
-    static let taskIdentifier = "com.aaronqin.HirewheelWatch.refresh"
+    /// Must match BGTaskSchedulerPermittedIdentifiers in Info.plist.
+    static let taskIdentifier = (Bundle.main.bundleIdentifier ?? "com.aaronqin.hirewatch") + ".refresh"
 
     private static let lastSeenKey = "hw.lastSeenScanID"
 

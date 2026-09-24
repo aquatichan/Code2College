@@ -103,22 +103,8 @@ class ScanRunner:
         if last is None:
             return True
         return datetime.now(timezone.utc) - last >= timedelta(
-            seconds=self._effective_interval(conn, user)
+            seconds=config.SCRAPE_INTERVAL_SECONDS
         )
-
-    def _effective_interval(self, conn: sqlite3.Connection, user: sqlite3.Row) -> int:
-        """The stored interval, but never faster than what has been paid for.
-
-        Entitlement is also checked when the interval is set, but that is a
-        point-in-time check: a refund, a revoked family-sharing purchase, or
-        leftover data would otherwise keep scanning at a rate the account is no
-        longer entitled to, forever. Clamping here makes the paid tier depend on
-        the purchase still being valid *now*.
-        """
-        wanted = user["interval_seconds"] or config.SCRAPE_INTERVAL_SECONDS
-        if db.interval_is_unlocked(conn, user["id"], wanted):
-            return wanted
-        return config.FREE_MIN_INTERVAL_SECONDS
 
     def _scan_user(self, conn: sqlite3.Connection, user_id: str) -> None:
         user = db.get_user(conn, user_id)

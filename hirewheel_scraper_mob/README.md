@@ -1,4 +1,4 @@
-# Hirewheel Scraper — Mobile
+# Hirewatch
 > By a Code2College student—for Code2College students.
 
 The [desktop watcher](../hirewheel_scraper_web) works, but it puts "something new
@@ -10,8 +10,9 @@ layer had to be rebuilt anyway, adds something the desktop version never had:
 
 ```
 hirewheel_scraper_mob/
-  server/   the scanning service (Python, FastAPI) — see server/README.md
-  ios/      the phone app (native SwiftUI)        — see ios/README.md
+  server/     the scanning service (Python, FastAPI) — see server/README.md
+  ios/        the phone app (native SwiftUI)        — see ios/README.md
+  DEPLOY.md   hosting it for friends: Fly.io + TestFlight
 ```
 
 ## Why the scraper can't just run on the phone
@@ -62,11 +63,11 @@ otherwise:
 
 ## Status
 
-**Server: built and tested.** 26 passing tests, and it has been booted and
-exercised over HTTP end to end.
+**Server: built and tested.** 57 passing tests across 11 modules, and it has
+been booted and exercised over HTTP end to end.
 
 **iOS app: builds and runs.** All 16 Swift files compile clean under Swift 6
-strict concurrency. `open ios/HirewheelWatch.xcodeproj` and hit Run.
+strict concurrency. `open ios/Hirewatch.xcodeproj` and hit Run.
 
 **Verified against live Hirewheel.** Hosted sign-in completes, and full scan
 cycles run end to end: 283 items extracted across 23 pages (17 configured + 6 discovered
@@ -75,9 +76,10 @@ zero items because they are genuinely empty for this account — Marketplace
 currently says "No open projects right now", and My Projects / My Interviews have
 no data yet.
 
-Not yet done: the noVNC login path is implemented but only exercised through the
-`local` mode fallback, and real APNs is wired but untestable without a paid Apple
-account. No change has yet been *observed* between two scans, since Hirewheel
+Not yet done: the streamed (noVNC) sign-in has only been tested piece by piece
+(its WebSocket relay has an automated test), not on a deployed server, and real
+APNs is wired but untestable without a paid Apple account. [DEPLOY.md](DEPLOY.md)
+covers both. No change has yet been *observed* between two scans, since Hirewheel
 hasn't changed during testing — the diff engine is covered by tests but has not
 fired on live data.
 
@@ -89,10 +91,11 @@ paths and the server tells it which is live:
 * **Now** — iOS wakes the app periodically, it checks the server, and raises a
   *local* notification. Free, works on a free provisioning profile. iOS controls
   the timing, so alerts can lag.
-* **Later** — drop the `.p8` key on the server, set `HW_PUSH_BACKEND=apns`, add
-  the Push Notifications capability. Instant delivery, app closed. No code change;
-  the app detects the switch and stops posting local notifications so you never
-  get notified twice.
+* **Later** — give the server the `.p8` key and set `HW_PUSH_BACKEND=apns`.
+  Instant delivery, even with the app closed. No code change; the app detects the
+  switch and stops posting local notifications so you never get notified twice.
+  Each phone reports whether its build uses Apple's sandbox or production push
+  gateway, so Debug builds and TestFlight builds work against the same server.
 
 ## Legal
 
@@ -118,6 +121,9 @@ run it for your own account.
 
 ## Getting started
 
+To host it for friends (Fly.io server + TestFlight app), follow
+**[DEPLOY.md](DEPLOY.md)**. To run it locally:
+
 ```bash
 # server
 cd server
@@ -127,5 +133,5 @@ export HW_SECRET_KEY="$(python -m hwserver.keygen)"
 export HW_INVITE_CODE="pick-something"
 python -m hwserver
 
-# app: follow ios/README.md to create the Xcode project once, then run it
+# app: open ios/Hirewatch.xcodeproj and hit Run (Debug points at localhost)
 ```

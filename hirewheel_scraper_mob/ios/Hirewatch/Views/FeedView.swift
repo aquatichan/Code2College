@@ -36,7 +36,7 @@ struct FeedView: View {
                     }
                 }
 
-                Text("Created by Aaron Qin")
+                Text("Created by Aaron Qin, Code2College '28")
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.textMuted)
                     .frame(maxWidth: .infinity)
@@ -45,7 +45,7 @@ struct FeedView: View {
             .padding(.vertical, 12)
         }
         .background(Theme.bg)
-        .navigationTitle("Hirewheel Watch")
+        .navigationTitle("Hirewatch")
         .navigationBarTitleDisplayMode(.inline)
         // Both lines are needed: the first picks the colour, the second stops the
         // bar going transparent at the top of the scroll (which was swallowing

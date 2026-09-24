@@ -5,8 +5,17 @@
 	<!-- Without this iOS silently refuses to run the background refresh task. -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.aaronqin.HirewheelWatch.refresh</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).refresh</string>
 	</array>
+	<!-- Server the sign-in screen starts with: localhost for Debug, the hosted
+	     server for Release (TestFlight / App Store). Set per configuration via
+	     the HW_DEFAULT_SERVER build setting. -->
+	<key>HWDefaultServerURL</key>
+	<string>$(HW_DEFAULT_SERVER)</string>
+	<!-- Only standard HTTPS, which is exempt; saves answering the export
+	     compliance question on every TestFlight upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- Allows talking to a server at plain http:// on your LAN during testing. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

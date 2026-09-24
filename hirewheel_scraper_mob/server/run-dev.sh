@@ -23,6 +23,16 @@ set -a
 source .env
 set +a
 
+PORT="${HW_PORT:-8000}"
+if lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+    # A second server can't bind the port, but it would still start its own
+    # background scanner first — so refuse loudly instead of half-starting.
+    echo "✗ port $PORT is already in use by pid $(lsof -iTCP:"$PORT" -sTCP:LISTEN -t | tr '\n' ' ')"
+    echo "  a server is probably already running. Stop it with:"
+    echo "    pkill -f -- '-m hwserver'"
+    exit 1
+fi
+
 echo "→ invite code: ${HW_INVITE_CODE}"
 echo "→ listening on http://localhost:8000"
 exec python3 -m hwserver

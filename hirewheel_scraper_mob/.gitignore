@@ -5,3 +5,7 @@ xcuserdata/
 DerivedData/
 build/
 .DS_Store
+nohup.out
+
+# Python
+__pycache__/

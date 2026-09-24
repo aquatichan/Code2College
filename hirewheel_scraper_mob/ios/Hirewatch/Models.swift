@@ -73,13 +73,6 @@ struct Me: Codable, Sendable {
     let label: String
     /// The Hirewheel login email, read from the account page at sign-in.
     let email: String?
-    /// Slowest interval everyone gets; anything faster must be purchased.
-    let freeMinIntervalSeconds: Int
-    /// Exactly which intervals this account may use. Purchases are independent,
-    /// so this is a set of unlocked values rather than a threshold.
-    let unlockedIntervalSeconds: [Int]
-    /// What is for sale, and the interval each unlocks.
-    let products: [ProductInfo]
     let needsReauth: Bool
     let intervalSeconds: Int
     let lastScanAt: String?
@@ -90,18 +83,10 @@ struct Me: Codable, Sendable {
     /// run its own background-refresh fallback instead of waiting for push.
     let remotePush: Bool
 
-    /// Whether a given interval is available without buying anything more.
-    func allows(interval seconds: Int) -> Bool {
-        seconds >= freeMinIntervalSeconds || unlockedIntervalSeconds.contains(seconds)
-    }
-
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
         case label
         case email
-        case freeMinIntervalSeconds = "free_min_interval_seconds"
-        case unlockedIntervalSeconds = "unlocked_interval_seconds"
-        case products
         case needsReauth = "needs_reauth"
         case intervalSeconds = "interval_seconds"
         case lastScanAt = "last_scan_at"
@@ -109,16 +94,6 @@ struct Me: Codable, Sendable {
         case mutedPages = "muted_pages"
         case loginMode = "login_mode"
         case remotePush = "remote_push"
-    }
-}
-
-struct ProductInfo: Codable, Sendable, Hashable {
-    let productID: String
-    let intervalSeconds: Int
-
-    enum CodingKeys: String, CodingKey {
-        case productID = "product_id"
-        case intervalSeconds = "interval_seconds"
     }
 }
 

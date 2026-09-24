@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sqlite3
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import appstore, authflow, config, db, media, push
+from . import authflow, config, db, media, push
 from .runner import RUNNER
 
 _conn: sqlite3.Connection | None = None
@@ -25,8 +27,18 @@ def conn() -> sqlite3.Connection:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _conn
+    if config.ENV == "production":
+        problems = config.production_problems()
+        if problems:
+            raise SystemExit(
+                "Refusing to start with HW_ENV=production:\n  - " + "\n  - ".join(problems)
+            )
+        if not push.backend_available():
+            print("[startup] push is off; phones fall back to background refresh")
     config.ensure_dirs()
     _conn = db.connect()
+    if closed := db.close_interrupted_scans(_conn):
+        print(f"[startup] closed {closed} scan(s) interrupted by the last shutdown")
     RUNNER.start()
     yield
     RUNNER.stop()
@@ -34,7 +46,18 @@ async def lifespan(app: FastAPI):
     _conn = None
 
 
-app = FastAPI(title="Hirewheel Watch", lifespan=lifespan)
+app = FastAPI(title="Hirewatch", lifespan=lifespan)
+
+# The noVNC page the app opens during hosted login. Served from here so the
+# stream shares the API's HTTPS address instead of needing its own port.
+if (_novnc_root := authflow.novnc_web_root()) is not None:
+    app.mount("/novnc", StaticFiles(directory=_novnc_root, html=True), name="novnc")
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, bool]:
+    """Liveness probe for the host; touches nothing user-specific."""
+    return {"ok": True}
 
 
 # -- auth ---------------------------------------------------------------------
@@ -58,20 +81,13 @@ class EnrollBody(BaseModel):
 
 class PushTokenBody(BaseModel):
     push_token: str
+    # Which APNs gateway issued the token: "sandbox" (Debug builds) or
+    # "production" (TestFlight / App Store). Older builds don't send it.
+    environment: str | None = None
 
 
 class MutesBody(BaseModel):
     muted_pages: list[str]
-
-
-class IntervalBody(BaseModel):
-    interval_seconds: int | None = None
-
-
-class PurchaseBody(BaseModel):
-    """The `jwsRepresentation` of a StoreKit 2 verified transaction."""
-
-    jws: str
 
 
 # -- enrollment ---------------------------------------------------------------
@@ -99,16 +115,8 @@ def me(device: sqlite3.Row = Depends(current_device)) -> dict[str, Any]:
         "user_id": user["id"],
         "label": user["label"],
         "email": user["email"],
-        "free_min_interval_seconds": config.FREE_MIN_INTERVAL_SECONDS,
-        # Exactly which intervals this account may use. Purchases are
-        # independent, so this is a set, not a threshold.
-        "unlocked_interval_seconds": db.unlocked_intervals(c, user["id"]),
-        "products": [
-            {"product_id": pid, "interval_seconds": secs}
-            for pid, secs in sorted(config.PRODUCTS.items(), key=lambda kv: -kv[1])
-        ],
         "needs_reauth": bool(user["needs_reauth"]),
-        "interval_seconds": user["interval_seconds"] or config.SCRAPE_INTERVAL_SECONDS,
+        "interval_seconds": config.SCRAPE_INTERVAL_SECONDS,
         "last_scan_at": last.isoformat() if last else None,
         "runner_status": RUNNER.status_for(user["id"]),
         "muted_pages": json.loads(device["muted_pages"] or "[]"),
@@ -133,14 +141,65 @@ def delete_me(device: sqlite3.Row = Depends(current_device)) -> dict[str, str]:
 @app.post("/auth/session")
 def start_login(device: sqlite3.Row = Depends(current_device)) -> dict[str, Any]:
     try:
-        sid, url = authflow.MANAGER.start(conn(), device["user_id"])
+        sid, url = authflow.MANAGER.start(conn(), device["user_id"], device["id"])
     except authflow.LoginUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     return {"session_id": sid, "login_url": url, "mode": config.LOGIN_MODE}
 
 
+@app.websocket("/auth/stream/{session_id}/{key}")
+async def login_stream(ws: WebSocket, session_id: str, key: str) -> None:
+    """Relay noVNC's WebSocket to the login display's x11vnc.
+
+    ``key`` is a random secret minted per login and only ever handed to the
+    device that started it; x11vnc itself listens on localhost only.
+    """
+    port = authflow.MANAGER.stream_port(session_id, key)
+    if port is None:
+        await ws.close(code=4404)
+        return
+    # Older noVNC builds ask for the "binary" subprotocol; newer ones ask for none.
+    requested = ws.scope.get("subprotocols") or []
+    await ws.accept(subprotocol="binary" if "binary" in requested else None)
+    try:
+        reader, writer = await asyncio.open_connection("127.0.0.1", port)
+    except OSError:
+        await ws.close(code=1011)
+        return
+
+    async def to_vnc() -> None:
+        while True:
+            msg = await ws.receive()
+            if msg["type"] == "websocket.disconnect":
+                return
+            data = msg.get("bytes") or (msg.get("text") or "").encode()
+            writer.write(data)
+            await writer.drain()
+
+    async def to_phone() -> None:
+        while data := await reader.read(65536):
+            await ws.send_bytes(data)
+
+    tasks = [asyncio.create_task(to_vnc()), asyncio.create_task(to_phone())]
+    try:
+        # Either side ending — the phone closing the sheet, or the display being
+        # torn down after sign-in — ends the relay.
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for t in tasks:
+            t.cancel()
+        writer.close()
+        try:
+            await ws.close()
+        except RuntimeError:
+            pass  # already closed by the client
+
+
 @app.get("/auth/session/{session_id}")
 def poll_login(session_id: str, device: sqlite3.Row = Depends(current_device)) -> dict[str, Any]:
+    # Re-read the device: completing a sign-in can move it onto an existing
+    # account (same Hirewheel email), and the session row moves with it.
+    device = db.device_by_token(conn(), device["token"]) or device
     row = db.get_login_session(conn(), session_id)
     if row is None or row["user_id"] != device["user_id"]:
         raise HTTPException(404, "no such login session")
@@ -154,11 +213,22 @@ def poll_login(session_id: str, device: sqlite3.Row = Depends(current_device)) -
 
 
 # -- devices ------------------------------------------------------------------
+@app.delete("/devices/me")
+def sign_out_device(device: sqlite3.Row = Depends(current_device)) -> dict[str, str]:
+    """Forget this device. The account and its history stay, so signing back in
+    with the same Hirewheel email picks them up again."""
+    db.delete_device(conn(), device["id"])
+    return {"status": "signed_out"}
+
+
 @app.post("/devices/push")
 def set_push_token(
     body: PushTokenBody, device: sqlite3.Row = Depends(current_device)
 ) -> dict[str, Any]:
-    db.update_device(conn(), device["id"], push_token=body.push_token)
+    env = body.environment
+    if env is not None and env not in ("sandbox", "production"):
+        raise HTTPException(400, "environment must be 'sandbox' or 'production'")
+    db.update_device(conn(), device["id"], push_token=body.push_token, push_env=env)
     return {"status": "ok", "remote_push": push.backend_available()}
 
 
@@ -170,29 +240,6 @@ def set_mutes(body: MutesBody, device: sqlite3.Row = Depends(current_device)) ->
         raise HTTPException(400, f"unknown page keys: {unknown}")
     db.update_device(conn(), device["id"], muted_pages=body.muted_pages)
     return {"muted_pages": sorted(set(body.muted_pages))}
-
-
-@app.patch("/me/interval")
-def set_interval(body: IntervalBody, device: sqlite3.Row = Depends(current_device)) -> dict[str, Any]:
-    c = conn()
-    seconds = body.interval_seconds
-    if seconds is None:
-        db.set_interval(c, device["user_id"], None)
-        return {"interval_seconds": config.SCRAPE_INTERVAL_SECONDS}
-
-    if seconds < 900:
-        raise HTTPException(400, "interval must be at least 900 seconds")
-
-    # Enforced here, not just hidden in the app: a client can call this directly,
-    # and StoreKit's on-device check proves nothing to us.
-    if not db.interval_is_unlocked(c, device["user_id"], seconds):
-        raise HTTPException(
-            402,
-            f"Scanning every {seconds // 3600}h has not been purchased on this account.",
-        )
-
-    db.set_interval(c, device["user_id"], seconds)
-    return {"interval_seconds": seconds}
 
 
 # -- pages / scans / history --------------------------------------------------
@@ -322,62 +369,6 @@ def get_media(path: str, device: sqlite3.Row = Depends(current_device)) -> FileR
     if not full.is_file():
         raise HTTPException(404, "no such screenshot")
     return FileResponse(full, media_type="image/webp")
-
-
-# -- purchases ----------------------------------------------------------------
-@app.post("/purchases")
-def record_purchase(
-    body: PurchaseBody, device: sqlite3.Row = Depends(current_device)
-) -> dict[str, Any]:
-    """Record a StoreKit purchase after verifying Apple signed it.
-
-    The app posts every entitlement it holds on launch and after a restore, so
-    this is idempotent by design.
-    """
-    try:
-        purchase = appstore.verify_transaction(body.jws)
-    except appstore.InvalidTransaction as exc:
-        raise HTTPException(400, str(exc)) from exc
-
-    c = conn()
-    db.record_purchase(
-        c,
-        device["user_id"],
-        product_id=purchase.product_id,
-        original_transaction_id=purchase.original_transaction_id,
-        interval_seconds=purchase.interval_seconds,
-        purchased_at=purchase.purchased_at.isoformat(),
-        signature_verified=purchase.signature_verified,
-        revoked=purchase.revoked,
-        environment=purchase.environment,
-    )
-    return {
-        "product_id": purchase.product_id,
-        "revoked": purchase.revoked,
-        "signature_verified": purchase.signature_verified,
-        "environment": purchase.environment,
-        "unlocked_interval_seconds": db.unlocked_intervals(c, device["user_id"]),
-    }
-
-
-@app.get("/purchases")
-def list_purchases(device: sqlite3.Row = Depends(current_device)) -> dict[str, Any]:
-    c = conn()
-    rows = db.purchases_for_user(c, device["user_id"])
-    return {
-        "unlocked_interval_seconds": db.unlocked_intervals(c, device["user_id"]),
-        "purchases": [
-            {
-                "product_id": r["product_id"],
-                "interval_seconds": r["interval_seconds"],
-                "purchased_at": r["purchased_at"],
-                "revoked": bool(r["revoked"]),
-                "signature_verified": bool(r["signature_verified"]),
-                "environment": r["environment"],
-            }
-            for r in rows
-        ],
-    }
 
 
 # -- manual scan --------------------------------------------------------------

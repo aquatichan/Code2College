@@ -31,6 +31,9 @@ def backend_available() -> bool:
     return config.PUSH_BACKEND == "apns" and CLIENT.is_configured()
 
 
+_OTHER_ENV = {"sandbox": "production", "production": "sandbox"}
+
+
 def _targets(conn: sqlite3.Connection, user_id: str) -> list[tuple[str, list[str]]]:
     """(push_token, muted_page_keys) for every device that can receive push."""
     import json
@@ -46,6 +49,11 @@ def _targets(conn: sqlite3.Connection, user_id: str) -> list[tuple[str, list[str
             muted = []
         out.append((token, muted))
     return out
+
+
+def _env_for(conn: sqlite3.Connection, token: str) -> str:
+    row = conn.execute("SELECT push_env FROM devices WHERE push_token = ?", (token,)).fetchone()
+    return (row["push_env"] if row else None) or config.APNS_ENVIRONMENT
 
 
 def _deliver(
@@ -65,8 +73,22 @@ def _deliver(
 
     sent = 0
     for token, title, body, data, collapse_id in messages:
+        env = _env_for(conn, token)
         try:
-            result = CLIENT.send(token, title=title, body=body, data=data, collapse_id=collapse_id)
+            result = CLIENT.send(
+                token, title=title, body=body, data=data, collapse_id=collapse_id, environment=env
+            )
+            if result.reason == "BadDeviceToken":
+                # Most often a token from the other gateway — e.g. a Release
+                # build run straight from Xcode. Try it once and remember.
+                other = _OTHER_ENV.get(env, "production")
+                retry = CLIENT.send(
+                    token, title=title, body=body, data=data, collapse_id=collapse_id,
+                    environment=other,
+                )
+                if retry.ok:
+                    db.set_push_env(conn, token, other)
+                result = retry
         except APNsNotConfigured as exc:
             print(f"[push] {exc}")
             return sent

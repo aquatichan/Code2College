@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+# --- Environment -------------------------------------------------------------
+# "development" (default) is for your own laptop. "production" is the hosted
+# server friends use: it refuses to start with settings that are only safe
+# locally — see production_problems().
+ENV = os.environ.get("HW_ENV", "development")
+
 # --- Paths -------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("HW_DATA_DIR", ROOT / "data"))
@@ -14,45 +20,8 @@ MEDIA_DIR = DATA_DIR / "media"
 DB_PATH = DATA_DIR / "hirewheel.db"
 
 # --- Timing ------------------------------------------------------------------
-# 24 hours is the standard cadence everyone gets.
-SCRAPE_INTERVAL_SECONDS = int(os.environ.get("HW_INTERVAL_SECONDS", 24 * 60 * 60))
-
-# Scanning more often than once a day is unlocked by a one-time purchase. The
-# server is where this is enforced — the app hides the options, but hiding a
-# button is not a restriction, so the API rejects them too.
-FREE_MIN_INTERVAL_SECONDS = 24 * 60 * 60
-
-# Non-consumable App Store products. Each unlocks one scan interval; buying a
-# faster one implies every slower one, so a single "fastest unlocked" value is
-# all that has to be stored.
-PRODUCTS: dict[str, int] = {
-    "com.aaronqin.HirewheelWatch.interval12h": 12 * 3600,
-    "com.aaronqin.HirewheelWatch.interval6h": 6 * 3600,
-    "com.aaronqin.HirewheelWatch.interval3h": 3 * 3600,
-    "com.aaronqin.HirewheelWatch.interval1h": 1 * 3600,
-}
-
-# Bundle id a purchase must belong to, checked during verification so a receipt
-# from some other app cannot unlock anything here.
-APPSTORE_BUNDLE_ID = os.environ.get("HW_APNS_BUNDLE_ID", "com.aaronqin.HirewheelWatch")
-
-# Apple's root CA (PEM), used to verify the certificate chain on a signed
-# transaction. Download from https://www.apple.com/certificateauthority/
-APPSTORE_ROOT_CA_PATH = os.environ.get("HW_APPSTORE_ROOT_CA", "")
-
-# Escape hatch for local StoreKit testing, where transactions are signed by
-# Xcode's throwaway certificate rather than Apple. Never enable in production:
-# it accepts any well-formed transaction without proving Apple issued it.
-ALLOW_UNVERIFIED_PURCHASES = os.environ.get("HW_ALLOW_UNVERIFIED_PURCHASES") == "1"
-
-# Which App Store environment this server honours: "sandbox" or "production".
-#
-# This is a separate check from the signature, and it is not optional. Apple signs
-# *sandbox* transactions with a real certificate chain, so signature verification
-# alone cannot tell a free TestFlight purchase from a paid one — and TestFlight
-# purchases are always sandbox and always free. A production server that skips
-# this check can be unlocked for free by replaying a sandbox transaction.
-APPSTORE_ENVIRONMENT = os.environ.get("HW_APPSTORE_ENVIRONMENT", "sandbox").lower()
+# Every account scans on the same fixed cadence.
+SCRAPE_INTERVAL_SECONDS = int(os.environ.get("HW_INTERVAL_SECONDS", 3 * 60 * 60))
 
 # How often the runner wakes to see whether any user is due for a scan.
 RUNNER_TICK_SECONDS = 60
@@ -82,23 +51,9 @@ LOGIN_URL_MARKERS = ("/login", "/accounts/login", "/sign-in")
 # "novnc"  → ephemeral headful browser on a virtual display, streamed to the app.
 LOGIN_MODE = os.environ.get("HW_LOGIN_MODE", "local")
 LOGIN_TIMEOUT_SECONDS = int(os.environ.get("HW_LOGIN_TIMEOUT", 600))
+# Where phones reach this server. The hosted-login stream is served from the
+# same address, so one HTTPS endpoint covers everything.
 PUBLIC_URL = os.environ.get("HW_PUBLIC_URL", "http://localhost:8000")
-
-
-def _stream_base() -> str:
-    """Scheme + host of PUBLIC_URL with any port stripped.
-
-    Each hosted login opens its own websockify port, so the stream URL is built
-    as `<scheme>://<host>:<that port>`. Reusing PUBLIC_URL directly would append
-    a second port to one that is already there.
-    """
-    parsed = urlparse(PUBLIC_URL)
-    host = parsed.hostname or "localhost"
-    return f"{parsed.scheme or 'http'}://{host}"
-
-
-# Override when the stream is reached at a different host than the API.
-STREAM_BASE = os.environ.get("HW_STREAM_BASE", _stream_base())
 
 # Gate on who may enroll. Phase 1 is single-user; this exists so the "a few
 # students I know" phase is invite-only rather than open.
@@ -113,10 +68,15 @@ INVITE_CODE = os.environ.get("HW_INVITE_CODE", "")
 PUSH_BACKEND = os.environ.get("HW_PUSH_BACKEND", "none")
 
 APNS_KEY_PATH = os.environ.get("HW_APNS_KEY_PATH", "")       # path to AuthKey_XXX.p8
+# ...or the key's contents directly, for hosts that store secrets as env vars
+# rather than files. Used when HW_APNS_KEY_PATH is empty.
+APNS_KEY = os.environ.get("HW_APNS_KEY", "").replace("\\n", "\n")
 APNS_KEY_ID = os.environ.get("HW_APNS_KEY_ID", "")           # 10-char key id
 APNS_TEAM_ID = os.environ.get("HW_APNS_TEAM_ID", "")         # 10-char team id
-APNS_BUNDLE_ID = os.environ.get("HW_APNS_BUNDLE_ID", "com.aaronqin.HirewheelWatch")
-# "sandbox" for development builds, "production" for TestFlight / App Store.
+APNS_BUNDLE_ID = os.environ.get("HW_APNS_BUNDLE_ID", "com.aaronqin.hirewatch")
+# Each device reports which APNs gateway its token belongs to — Debug builds
+# "sandbox", TestFlight / App Store builds "production" — so one server serves
+# both. This is only the fallback for devices that haven't said.
 APNS_ENVIRONMENT = os.environ.get("HW_APNS_ENVIRONMENT", "sandbox")
 
 
@@ -160,3 +120,21 @@ def ensure_dirs() -> None:
     """Create the local data directories if they don't exist yet."""
     for d in (DATA_DIR, MEDIA_DIR):
         d.mkdir(parents=True, exist_ok=True)
+
+
+def production_problems() -> list[str]:
+    """Settings that are fine on a laptop but unsafe on a server friends use.
+
+    Checked at startup when HW_ENV=production; any hit stops the server rather
+    than letting it run half-configured with other people's sessions in it.
+    """
+    problems = []
+    if not os.environ.get("HW_SECRET_KEY", "").strip():
+        problems.append("HW_SECRET_KEY is not set (python -m hwserver.keygen)")
+    if not INVITE_CODE:
+        problems.append("HW_INVITE_CODE is empty, so anyone who finds the URL could enroll")
+    if urlparse(PUBLIC_URL).scheme != "https":
+        problems.append(f"HW_PUBLIC_URL must be https:// (got {PUBLIC_URL!r})")
+    if LOGIN_MODE != "novnc":
+        problems.append("HW_LOGIN_MODE must be novnc; local opens a window nobody can see")
+    return problems

@@ -6,7 +6,8 @@ protocol, so there is no reason to pull in a push SDK — `cryptography` (alread
 dependency, for session encryption) signs the token and `httpx` speaks HTTP/2.
 
 The .p8 key is a long-lived credential for your entire Apple developer account.
-It belongs in a file the server reads at startup, never in the repository.
+It belongs in a file the server reads at startup (HW_APNS_KEY_PATH) or a host's
+secret store (HW_APNS_KEY), never in the repository.
 """
 
 from __future__ import annotations
@@ -73,13 +74,24 @@ class APNsClient:
 
     # -- configuration --------------------------------------------------------
     @staticmethod
+    def _has_key() -> bool:
+        if config.APNS_KEY_PATH:
+            return Path(config.APNS_KEY_PATH).is_file()
+        return bool(config.APNS_KEY.strip())
+
+    @staticmethod
+    def _key_bytes() -> bytes:
+        if config.APNS_KEY_PATH:
+            return Path(config.APNS_KEY_PATH).read_bytes()
+        return config.APNS_KEY.encode("ascii")
+
+    @staticmethod
     def is_configured() -> bool:
         return bool(
-            config.APNS_KEY_PATH
-            and config.APNS_KEY_ID
+            config.APNS_KEY_ID
             and config.APNS_TEAM_ID
             and config.APNS_BUNDLE_ID
-            and Path(config.APNS_KEY_PATH).is_file()
+            and APNsClient._has_key()
         )
 
     @staticmethod
@@ -89,14 +101,14 @@ class APNsClient:
         missing = [
             name
             for name, value in (
-                ("HW_APNS_KEY_PATH", config.APNS_KEY_PATH),
+                ("HW_APNS_KEY_PATH or HW_APNS_KEY", config.APNS_KEY_PATH or config.APNS_KEY),
                 ("HW_APNS_KEY_ID", config.APNS_KEY_ID),
                 ("HW_APNS_TEAM_ID", config.APNS_TEAM_ID),
                 ("HW_APNS_BUNDLE_ID", config.APNS_BUNDLE_ID),
             )
             if not value
         ]
-        if not missing and not Path(config.APNS_KEY_PATH).is_file():
+        if not missing and config.APNS_KEY_PATH and not Path(config.APNS_KEY_PATH).is_file():
             raise APNsNotConfigured(f"APNs key file not found: {config.APNS_KEY_PATH}")
         raise APNsNotConfigured("APNs is not configured; missing: " + ", ".join(missing))
 
@@ -109,9 +121,7 @@ class APNsClient:
                 return self._jwt  # type: ignore[return-value]
 
             self._require_config()
-            key = serialization.load_pem_private_key(
-                Path(config.APNS_KEY_PATH).read_bytes(), password=None
-            )
+            key = serialization.load_pem_private_key(self._key_bytes(), password=None)
             if not isinstance(key, ec.EllipticCurvePrivateKey):
                 raise APNsNotConfigured("APNs key is not an EC private key; expected a .p8")
 
@@ -162,10 +172,17 @@ class APNsClient:
         body: str,
         data: dict | None = None,
         collapse_id: str | None = None,
+        environment: str | None = None,
     ) -> SendResult:
-        """Deliver one alert. Never raises for a per-device failure."""
+        """Deliver one alert. Never raises for a per-device failure.
+
+        ``environment`` is the gateway the device's token was issued for
+        ("sandbox" or "production"); a token sent to the wrong one is rejected
+        as BadDeviceToken.
+        """
         token = self._provider_token()
-        host = _HOSTS.get(config.APNS_ENVIRONMENT, _HOSTS["sandbox"])
+        env = environment or config.APNS_ENVIRONMENT
+        host = _HOSTS.get(env, _HOSTS["sandbox"])
 
         payload: dict = {
             "aps": {

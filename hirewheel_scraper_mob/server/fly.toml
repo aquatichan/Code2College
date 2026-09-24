@@ -1,0 +1,42 @@
+# Fly.io deployment — see DEPLOY.md. `app` must be globally unique; if
+# "hirewatch" is taken, pick another name and change HW_PUBLIC_URL below and
+# HW_DEFAULT_SERVER (Release) in the Xcode project to match.
+app = "hirewatch"
+primary_region = "dfw"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  HW_ENV = "production"
+  HW_PUBLIC_URL = "https://hirewatch.fly.dev"
+  HW_APNS_BUNDLE_ID = "com.aaronqin.hirewatch"
+  # "none" until the APNs key is added as a secret; then flip to "apns".
+  HW_PUSH_BACKEND = "none"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # The scanner runs inside this process on a 3-hour schedule. A machine that
+  # sleeps when idle would silently stop scanning, so it must stay up.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+# SQLite database + screenshots. Survives deploys and restarts.
+[[mounts]]
+  source = "hirewatch_data"
+  destination = "/data"
+
+# Chromium needs the headroom; 512 MB gets killed mid-scan.
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

@@ -12,8 +12,11 @@ Two modes, chosen by ``HW_LOGIN_MODE``:
   and for a single user running the server on their own laptop; it is the same
   flow as the desktop project's ``python -m hwscraper.login``.
 * ``novnc``  — ephemeral headful browser on a virtual X display (Xvfb), exposed
-  over x11vnc + websockify + noVNC so the app can render it in a WKWebView. The
-  display and the browser exist only for the duration of the login window.
+  over x11vnc and rendered by noVNC in the app's WKWebView. The API serves the
+  noVNC page and relays its WebSocket to x11vnc (see ``api.login_stream``), so
+  the whole login travels over the server's one HTTPS address — no extra ports
+  to open on the host. The display and the browser exist only for the duration
+  of the login window.
 
 Each login runs on its own thread with its own Playwright instance, because sync
 Playwright objects must not be shared across threads.
@@ -50,7 +53,7 @@ class _Display:
 
     number: int
     password: str
-    web_port: int
+    vnc_port: int
     procs: list[subprocess.Popen] = field(default_factory=list)
 
     @property
@@ -70,16 +73,13 @@ class _Display:
         self.procs.clear()
 
 
-_NOVNC_BINARIES = ("Xvfb", "x11vnc", "websockify")
+_NOVNC_BINARIES = ("Xvfb", "x11vnc")
 
 
-def _novnc_web_root() -> str:
+def novnc_web_root() -> str | None:
+    """Where the noVNC page lives, or None when it isn't installed."""
     root = os.environ.get("HW_NOVNC_DIR", "/usr/share/novnc")
-    if not os.path.isdir(root):
-        raise LoginUnavailable(
-            f"noVNC web assets not found at {root}. Install noVNC or set HW_NOVNC_DIR."
-        )
-    return root
+    return root if os.path.isfile(os.path.join(root, "vnc.html")) else None
 
 
 def _start_display() -> _Display:
@@ -90,19 +90,21 @@ def _start_display() -> _Display:
             "Run the server in the provided container, or set HW_LOGIN_MODE=local "
             "to sign in with a browser window on this machine instead."
         )
-    web_root = _novnc_web_root()
+    if novnc_web_root() is None:
+        raise LoginUnavailable(
+            "noVNC web assets not found. Install noVNC or set HW_NOVNC_DIR."
+        )
 
     # Display numbers are a tiny shared namespace; a high random one is very
     # unlikely to collide and Xvfb fails loudly if it does.
     number = secrets.randbelow(400) + 100
     vnc_port = _free_port()
-    web_port = _free_port()
     # NOTE: x11vnc takes the password on argv, so it is briefly visible in `ps`
     # on the server. Acceptable because the VNC socket is bound to localhost and
     # the whole display is torn down within minutes; worth revisiting with
     # -passwdfile if this ever runs on a shared host.
     password = secrets.token_urlsafe(9)[:8]
-    disp = _Display(number=number, password=password, web_port=web_port)
+    disp = _Display(number=number, password=password, vnc_port=vnc_port)
 
     disp.procs.append(
         subprocess.Popen(
@@ -123,13 +125,6 @@ def _start_display() -> _Display:
             stderr=subprocess.DEVNULL,
         )
     )
-    disp.procs.append(
-        subprocess.Popen(
-            ["websockify", "--web", web_root, str(web_port), f"localhost:{vnc_port}"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    )
     time.sleep(1.0)
     return disp
 
@@ -139,9 +134,19 @@ class LoginManager:
 
     def __init__(self) -> None:
         self._threads: dict[str, threading.Thread] = {}
+        # login session id -> (x11vnc port, stream key) while a display is up.
+        self._streams: dict[str, tuple[int, str]] = {}
         self._lock = threading.Lock()
 
-    def start(self, conn, user_id: str) -> tuple[str, str]:
+    def stream_port(self, sid: str, key: str) -> int | None:
+        """The VNC port behind a live login stream, if ``key`` matches it."""
+        with self._lock:
+            entry = self._streams.get(sid)
+        if entry is None or not secrets.compare_digest(entry[1], key):
+            return None
+        return entry[0]
+
+    def start(self, conn, user_id: str, device_id: str | None = None) -> tuple[str, str]:
         """Begin a login. Returns (login_session_id, url_for_the_app_to_open).
 
         In ``local`` mode the URL is empty — the browser opens on the server
@@ -151,9 +156,14 @@ class LoginManager:
         if mode not in ("local", "novnc"):
             raise LoginUnavailable(f"unknown HW_LOGIN_MODE: {mode!r}")
 
-        sid = db.create_login_session(conn, user_id, "", config.LOGIN_TIMEOUT_SECONDS)
+        sid = db.create_login_session(
+            conn, user_id, "", config.LOGIN_TIMEOUT_SECONDS, device_id=device_id
+        )
         thread = threading.Thread(
-            target=self._run, args=(sid, user_id, mode), name=f"hw-login-{sid[:8]}", daemon=True
+            target=self._run,
+            args=(sid, user_id, device_id, mode),
+            name=f"hw-login-{sid[:8]}",
+            daemon=True,
         )
         with self._lock:
             self._threads[sid] = thread
@@ -177,7 +187,7 @@ class LoginManager:
         return sid, ""
 
     # -- worker ---------------------------------------------------------------
-    def _run(self, sid: str, user_id: str, mode: str) -> None:
+    def _run(self, sid: str, user_id: str, device_id: str | None, mode: str) -> None:
         """Own thread, own Playwright instance, own database connection."""
         conn = db.connect()
         disp: _Display | None = None
@@ -186,18 +196,26 @@ class LoginManager:
             if mode == "novnc":
                 disp = _start_display()
                 display_name = disp.name
+                key = secrets.token_urlsafe(32)
+                with self._lock:
+                    self._streams[sid] = (disp.vnc_port, key)
                 url = (
-                    f"{config.STREAM_BASE.rstrip('/')}:{disp.web_port}/vnc.html"
-                    f"?autoconnect=1&resize=scale&password={disp.password}"
+                    f"{config.PUBLIC_URL.rstrip('/')}/novnc/vnc.html"
+                    f"?autoconnect=1&resize=scale&reconnect=1"
+                    f"&path=auth/stream/{sid}/{key}&password={disp.password}"
                 )
                 db.set_login_url(conn, sid, url)
 
             with UserBrowser(headless=False, display=display_name) as browser:
                 if browser.wait_for_login(timeout_s=config.LOGIN_TIMEOUT_SECONDS):
-                    db.save_auth_state(conn, user_id, browser.storage_state())
-                    # Read the account's own email once, while the session is
-                    # fresh, so the app can show who it is signed in as.
-                    db.set_email(conn, user_id, profile.fetch_login_email(browser))
+                    # Work out whose account this is *before* storing the
+                    # session: signing back in with the same Hirewheel email
+                    # should land on your existing history, not a new account.
+                    email = profile.fetch_login_email(browser)
+                    owner = db.claim_account(conn, user_id, device_id, email)
+                    db.save_auth_state(conn, owner, browser.storage_state())
+                    if email:
+                        db.set_email(conn, owner, email)
                     db.set_login_status(conn, sid, "authenticated")
                 else:
                     db.set_login_status(conn, sid, "expired", "Timed out waiting for sign-in.")
@@ -208,6 +226,8 @@ class LoginManager:
         finally:
             # Tear the streamed display down the moment we are done with it — it
             # must not outlive the login window.
+            with self._lock:
+                self._streams.pop(sid, None)
             if disp is not None:
                 disp.stop()
             conn.close()

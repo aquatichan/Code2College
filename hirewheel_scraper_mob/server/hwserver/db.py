@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS users (
     label         TEXT NOT NULL,
     created_at    TEXT NOT NULL,
     needs_reauth  INTEGER NOT NULL DEFAULT 1,
-    interval_seconds INTEGER,
     email         TEXT
 );
 
@@ -46,6 +45,7 @@ CREATE TABLE IF NOT EXISTS devices (
     user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token       TEXT NOT NULL UNIQUE,
     push_token  TEXT,
+    push_env    TEXT,
     platform    TEXT,
     muted_pages TEXT NOT NULL DEFAULT '[]',
     created_at  TEXT NOT NULL
@@ -91,19 +91,6 @@ CREATE TABLE IF NOT EXISTS watched_pages (
     PRIMARY KEY (user_id, page_key)
 );
 
-CREATE TABLE IF NOT EXISTS purchases (
-    user_id                 TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    product_id              TEXT NOT NULL,
-    original_transaction_id TEXT NOT NULL,
-    interval_seconds        INTEGER NOT NULL,
-    purchased_at            TEXT NOT NULL,
-    recorded_at             TEXT NOT NULL,
-    signature_verified      INTEGER NOT NULL DEFAULT 0,
-    revoked                 INTEGER NOT NULL DEFAULT 0,
-    environment             TEXT NOT NULL DEFAULT 'Unknown',
-    PRIMARY KEY (user_id, original_transaction_id)
-);
-
 CREATE TABLE IF NOT EXISTS login_sessions (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -119,7 +106,6 @@ CREATE INDEX IF NOT EXISTS idx_snapshots_scan  ON page_snapshots(scan_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_page  ON page_snapshots(page_key, scan_id DESC);
 CREATE INDEX IF NOT EXISTS idx_diffs_scan      ON page_diffs(scan_id);
 CREATE INDEX IF NOT EXISTS idx_devices_user    ON devices(user_id);
-CREATE INDEX IF NOT EXISTS idx_purchases_user  ON purchases(user_id);
 """
 
 
@@ -150,7 +136,8 @@ def connect(path: Path | str | None = None) -> sqlite3.Connection:
 # so compare against the live table rather than catching duplicate-column errors.
 _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("users", "email", "TEXT"),
-    ("purchases", "environment", "TEXT NOT NULL DEFAULT 'Unknown'"),
+    ("login_sessions", "device_id", "TEXT"),
+    ("devices", "push_env", "TEXT"),
 )
 
 
@@ -207,11 +194,6 @@ def set_needs_reauth(conn: sqlite3.Connection, user_id: str, needs: bool) -> Non
     conn.commit()
 
 
-def set_interval(conn: sqlite3.Connection, user_id: str, seconds: int | None) -> None:
-    conn.execute("UPDATE users SET interval_seconds = ? WHERE id = ?", (seconds, user_id))
-    conn.commit()
-
-
 def set_email(conn: sqlite3.Connection, user_id: str, email: str | None) -> None:
     conn.execute("UPDATE users SET email = ? WHERE id = ?", (email, user_id))
     conn.commit()
@@ -252,72 +234,82 @@ def page_labels(conn: sqlite3.Connection, user_id: str) -> dict[str, str]:
     return {r["page_key"]: r["label"] for r in watched_pages(conn, user_id)}
 
 
-# -- purchases ----------------------------------------------------------------
-def record_purchase(
+def find_user_by_email(conn: sqlite3.Connection, email: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM users WHERE lower(email) = lower(?) ORDER BY created_at LIMIT 1",
+        (email,),
+    ).fetchone()
+
+
+def _is_placeholder(conn: sqlite3.Connection, user_id: str) -> bool:
+    """An account created at enrollment that has never been signed in or scanned."""
+    user = get_user(conn, user_id)
+    if user is None or user["email"]:
+        return False
+    has_scans = conn.execute(
+        "SELECT 1 FROM scans WHERE user_id = ? LIMIT 1", (user_id,)
+    ).fetchone()
+    return has_scans is None
+
+
+def claim_account(
     conn: sqlite3.Connection,
     user_id: str,
-    *,
-    product_id: str,
-    original_transaction_id: str,
-    interval_seconds: int,
-    purchased_at: str,
-    signature_verified: bool,
-    revoked: bool,
-    environment: str = "Unknown",
-) -> None:
-    """Store an entitlement. Keyed on Apple's original transaction id, so the app
-    re-sending the same purchase (every launch, or after a restore) is harmless."""
-    conn.execute(
-        "INSERT INTO purchases (user_id, product_id, original_transaction_id, "
-        "interval_seconds, purchased_at, recorded_at, signature_verified, revoked, "
-        "environment) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
-        "ON CONFLICT(user_id, original_transaction_id) DO UPDATE SET "
-        "  revoked = excluded.revoked, "
-        "  signature_verified = excluded.signature_verified, "
-        "  environment = excluded.environment, "
-        "  recorded_at = excluded.recorded_at",
-        (
-            user_id,
-            product_id,
-            original_transaction_id,
-            interval_seconds,
-            purchased_at,
-            _now(),
-            1 if signature_verified else 0,
-            1 if revoked else 0,
-            environment,
-        ),
-    )
+    device_id: str | None,
+    email: str | None,
+) -> str:
+    """Decide which account a just-completed Hirewheel sign-in belongs to.
+
+    Accounts are keyed by the Hirewheel login email, so signing out and back in
+    — or reinstalling the app — lands on the same history instead of starting
+    over. Enrollment always creates a fresh placeholder account (the server does
+    not know who you are until you sign in to Hirewheel), so this is where the
+    placeholder is folded into the real one.
+
+    Returns the user id that should own the session.
+
+    Three cases:
+      * the email already belongs to another account → move this device there,
+        and discard the placeholder if that's all it was;
+      * this account already belongs to a *different* Hirewheel login → someone
+        else signed in on this phone; give them their own account rather than
+        mixing their pages into the previous person's history;
+      * otherwise this account simply claims the email.
+    """
+    if not email:
+        return user_id
+
+    current = get_user(conn, user_id)
+    existing = find_user_by_email(conn, email)
+
+    if existing is not None and existing["id"] == user_id:
+        return user_id
+    if existing is not None:
+        target = existing["id"]
+    elif current is not None and current["email"] and current["email"].lower() != email.lower():
+        target = create_user(conn, current["label"])
+    else:
+        return user_id
+
+    # Only the device that performed this sign-in follows it.
+    if device_id:
+        conn.execute("UPDATE devices SET user_id = ? WHERE id = ?", (target, device_id))
+        conn.execute(
+            "UPDATE login_sessions SET user_id = ? WHERE device_id = ?", (target, device_id)
+        )
+    else:
+        conn.execute("UPDATE devices SET user_id = ? WHERE user_id = ?", (target, user_id))
+        conn.execute("UPDATE login_sessions SET user_id = ? WHERE user_id = ?", (target, user_id))
     conn.commit()
 
-
-def purchases_for_user(conn: sqlite3.Connection, user_id: str) -> list[sqlite3.Row]:
-    return conn.execute(
-        "SELECT * FROM purchases WHERE user_id = ? ORDER BY interval_seconds", (user_id,)
-    ).fetchall()
+    if _is_placeholder(conn, user_id):
+        delete_user(conn, user_id)
+    return target
 
 
-def unlocked_intervals(conn: sqlite3.Connection, user_id: str) -> list[int]:
-    """Every interval this user has bought, plus the free one.
-
-    Purchases are independent: buying the 6-hour interval unlocks the 6-hour
-    interval and nothing else. A refunded purchase simply stops appearing.
-    """
-    rows = conn.execute(
-        "SELECT DISTINCT interval_seconds FROM purchases WHERE user_id = ? AND revoked = 0",
-        (user_id,),
-    ).fetchall()
-    unlocked = {r["interval_seconds"] for r in rows}
-    unlocked.add(config.FREE_MIN_INTERVAL_SECONDS)
-    return sorted(unlocked)
-
-
-def interval_is_unlocked(conn: sqlite3.Connection, user_id: str, seconds: int) -> bool:
-    """Anything at or slower than the free floor is always allowed."""
-    if seconds >= config.FREE_MIN_INTERVAL_SECONDS:
-        return True
-    return seconds in set(unlocked_intervals(conn, user_id))
+def delete_device(conn: sqlite3.Connection, device_id: str) -> None:
+    conn.execute("DELETE FROM devices WHERE id = ?", (device_id,))
+    conn.commit()
 
 
 def delete_user(conn: sqlite3.Connection, user_id: str) -> None:
@@ -390,15 +382,24 @@ def update_device(
     device_id: str,
     *,
     push_token: str | None = None,
+    push_env: str | None = None,
     muted_pages: list[str] | None = None,
 ) -> None:
     if push_token is not None:
         conn.execute("UPDATE devices SET push_token = ? WHERE id = ?", (push_token, device_id))
+    if push_env is not None:
+        conn.execute("UPDATE devices SET push_env = ? WHERE id = ?", (push_env, device_id))
     if muted_pages is not None:
         conn.execute(
             "UPDATE devices SET muted_pages = ? WHERE id = ?",
             (json.dumps(sorted(set(muted_pages))), device_id),
         )
+    conn.commit()
+
+
+def set_push_env(conn: sqlite3.Connection, push_token: str, push_env: str) -> None:
+    """Record which APNs gateway a token actually works on."""
+    conn.execute("UPDATE devices SET push_env = ? WHERE push_token = ?", (push_env, push_token))
     conn.commit()
 
 
@@ -416,6 +417,22 @@ def start_scan(conn: sqlite3.Connection, user_id: str) -> int:
     )
     conn.commit()
     return int(cur.lastrowid)
+
+
+def close_interrupted_scans(conn: sqlite3.Connection) -> int:
+    """Mark scans left 'running' by a previous process as failed.
+
+    Only one server process runs scans, so at startup nothing can genuinely be
+    in progress. Without this, a restart mid-scan (every deploy) leaves a row
+    the app shows as "Scanning…" forever.
+    """
+    cur = conn.execute(
+        "UPDATE scans SET finished_at = ?, status = 'error', "
+        "error = 'Interrupted by a server restart' WHERE status = 'running'",
+        (_now(),),
+    )
+    conn.commit()
+    return cur.rowcount
 
 
 def finish_scan(
@@ -582,13 +599,27 @@ def delete_scans(conn: sqlite3.Connection, scan_ids: list[int]) -> None:
 
 
 # -- login sessions -----------------------------------------------------------
-def create_login_session(conn: sqlite3.Connection, user_id: str, login_url: str, ttl_s: int) -> str:
+def create_login_session(
+    conn: sqlite3.Connection,
+    user_id: str,
+    login_url: str,
+    ttl_s: int,
+    device_id: str | None = None,
+) -> str:
     sid = uuid.uuid4().hex
     now = datetime.now(timezone.utc)
     conn.execute(
-        "INSERT INTO login_sessions (id, user_id, status, login_url, created_at, expires_at) "
-        "VALUES (?, ?, 'pending', ?, ?, ?)",
-        (sid, user_id, login_url, now.isoformat(), (now + timedelta(seconds=ttl_s)).isoformat()),
+        "INSERT INTO login_sessions "
+        "(id, user_id, device_id, status, login_url, created_at, expires_at) "
+        "VALUES (?, ?, ?, 'pending', ?, ?, ?)",
+        (
+            sid,
+            user_id,
+            device_id,
+            login_url,
+            now.isoformat(),
+            (now + timedelta(seconds=ttl_s)).isoformat(),
+        ),
     )
     conn.commit()
     return sid

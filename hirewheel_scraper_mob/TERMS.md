@@ -1,12 +1,12 @@
-# Terms of Service — Hirewheel Watch
+# Terms of Service — Hirewatch
 
-**Last updated: 15 September 2026**
+**Last updated: 23 September 2026**
 
-By using Hirewheel Watch you agree to these terms. If you do not, delete the app.
+By using Hirewatch you agree to these terms. If you do not, delete the app.
 
 ## 1. What this is
 
-Hirewheel Watch is an **unofficial, independent** tool built by a Code2College
+Hirewatch is an **unofficial, independent** tool built by a Code2College
 student. It is **not affiliated with, endorsed by, sponsored by, or supported by
 Code2College or HireWheel**. Nothing in the app comes from Code2College, and they
 are not responsible for it.
@@ -43,8 +43,8 @@ under 18.
 You agree to:
 
 - use only your own HireWheel account, and never another person's credentials;
-- keep the scan interval reasonable, and not use the app to place unusual load on
-  HireWheel;
+- not modify the app or server to scan more often than its fixed schedule, or
+  otherwise place unusual load on HireWheel;
 - stop using the app if Code2College asks you to;
 - accept that you remain bound by whatever agreements you made with Code2College
   when you registered, and that this app does not alter them.
@@ -56,17 +56,7 @@ protecting the encryption key, honoring deletion requests, and telling users if
 their data is exposed. Enrollment is invite-gated for this reason. Do not open it
 to people you cannot support.
 
-## 5. Purchases
-
-Faster scan intervals are **one-time, non-consumable** in-app purchases. Each
-interval is bought separately; buying one does not unlock any other. 24-hour
-scanning is free and always available.
-
-Purchases are processed by Apple, recorded against your Apple ID, and restorable
-at no cost. **All refunds are handled by Apple**, not by this app or its author.
-Entitlements are re-verified by the server, so a refunded purchase stops working.
-
-## 6. No warranty
+## 5. No warranty
 
 The app is provided **"as is", without warranty of any kind**. In particular:
 
@@ -81,19 +71,19 @@ The app is provided **"as is", without warranty of any kind**. In particular:
 a deadline because a notification did not arrive is a foreseeable outcome, and
 the author is not liable for it.
 
-## 7. Liability
+## 6. Liability
 
 To the maximum extent permitted by law, the author is not liable for any indirect
 or consequential damages, lost opportunities, or missed deadlines arising from
-use of the app. Where liability cannot be excluded, it is limited to the amount
-you paid for in-app purchases.
+use of the app. The app is free, and where liability cannot be excluded it is
+limited to the maximum extent the law allows.
 
-## 8. Termination
+## 7. Termination
 
 Stop at any time by deleting your account in Settings, which erases your data
 immediately. The operator of a server may discontinue it at any time.
 
-## 9. Changes
+## 8. Changes
 
 Material changes to these terms will be noted by the date at the top. Continued
 use after a change means acceptance.

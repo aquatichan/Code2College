@@ -147,8 +147,32 @@ struct APIClient: Sendable {
 
     @discardableResult
     func registerPushToken(_ token: String) async throws -> Data {
-        struct Body: Encodable, Sendable { let push_token: String }
-        return try await raw("devices/push", method: "POST", body: Body(push_token: token))
+        struct Body: Encodable, Sendable {
+            let push_token: String
+            let environment: String
+        }
+        return try await raw(
+            "devices/push",
+            method: "POST",
+            body: Body(push_token: token, environment: Self.pushEnvironment)
+        )
+    }
+
+    /// Which APNs gateway this build's tokens belong to. Tokens only work
+    /// against the gateway they were issued for, so one server can serve Debug
+    /// builds (sandbox) and TestFlight / App Store builds (production) at once.
+    static var pushEnvironment: String {
+        #if DEBUG
+        "sandbox"
+        #else
+        "production"
+        #endif
+    }
+
+    /// The server a fresh install points at, from `HW_DEFAULT_SERVER`.
+    static var defaultServer: String {
+        (Bundle.main.object(forInfoDictionaryKey: "HWDefaultServerURL") as? String)
+            ?? "http://localhost:8000"
     }
 
     @discardableResult
@@ -157,17 +181,11 @@ struct APIClient: Sendable {
         return try await raw("devices/me", method: "PATCH", body: Body(muted_pages: keys))
     }
 
+    /// Forget this device on the server. The account and its history remain,
+    /// so signing back in with the same Hirewheel email picks them up again.
     @discardableResult
-    func setInterval(_ seconds: Int) async throws -> Data {
-        struct Body: Encodable, Sendable { let interval_seconds: Int }
-        return try await raw("me/interval", method: "PATCH", body: Body(interval_seconds: seconds))
-    }
-
-    /// Hand one StoreKit signed transaction to the server for verification.
-    @discardableResult
-    func recordPurchase(jws: String) async throws -> Data {
-        struct Body: Encodable, Sendable { let jws: String }
-        return try await raw("purchases", method: "POST", body: Body(jws: jws))
+    func signOutDevice() async throws -> Data {
+        try await raw("devices/me", method: "DELETE")
     }
 
     @discardableResult

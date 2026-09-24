@@ -12,7 +12,8 @@ struct SignInView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
 
-    @State private var baseURLText = "http://localhost:8000"
+    @State private var baseURLText = APIClient.defaultServer
+    @State private var showServerField = false
     @State private var inviteCode = ""
     @State private var busy = false
     @State private var error: String?
@@ -50,15 +51,24 @@ struct SignInView: View {
     private var enrollForm: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Connect to your watcher")
+                Text("Welcome to Hirewatch")
                     .font(.title2.bold())
                     .foregroundStyle(Theme.text)
-                Text("Enter the address of the server running your Hirewheel watcher, plus the invite code you were given.")
+                Text("Enter the invite code you were given.")
                     .font(.callout)
                     .foregroundStyle(Theme.textMuted)
 
-                field("https://your-server", text: $baseURLText, keyboard: .URL)
                 field("Invite code", text: $inviteCode)
+
+                // Friends never need this; it's for pointing a build at a
+                // different server (a local one while developing).
+                if showServerField {
+                    field("https://your-server", text: $baseURLText, keyboard: .URL)
+                } else {
+                    Button("Use a different server") { showServerField = true }
+                        .font(.caption)
+                        .foregroundStyle(Theme.textMuted)
+                }
 
                 errorText
 
@@ -76,7 +86,7 @@ struct SignInView: View {
                 Text("Sign in to Hirewheel")
                     .font(.title2.bold())
                     .foregroundStyle(Theme.text)
-                Text("Your server will open Hirewheel's own login page. Your password goes straight into that page — the watcher only stores the session it creates.")
+                Text("Hirewatch will open Hirewheel's own login page. Your password goes straight into that page — the watcher only stores the session it creates.")
                     .font(.callout)
                     .foregroundStyle(Theme.textMuted)
 
@@ -98,7 +108,7 @@ struct SignInView: View {
 
     private func streamedBrowser(url: URL) -> some View {
         VStack(spacing: 0) {
-            Text("Sign in to Hirewheel below. This is a real browser running on your server.")
+            Text("Sign in to Hirewheel below. This is a real browser running on the Hirewatch server.")
                 .font(.caption)
                 .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
