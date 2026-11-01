@@ -6,6 +6,7 @@ This portfolio is arranged by date of project creation.
 
 | Code | Project | Type | Date Created |
 |------|---------|------|--------------|
+| **AC** | [AutoContact](https://github.com/aquatichan/ai-eng-fall-2026) | Contact Synchronization App | 10/27/26 |
 | **HM** | Hirewatch {Hirewheel Scraper, Mobile Version} | Student Opportunity Scraper | 9/16/26 |
 | **EX** | MathEXplained Discord Bot {v1} | Community Discord Bot | 7/22/26 |
 | **HD** | Hirewheel Scraper {Desktop Version} | Student Opportunity Scraper | 7/20/26 |
@@ -18,6 +19,45 @@ This portfolio is arranged by date of project creation.
 | **SY** | Scentasy | Fragrance Discovery Platform | 3/24/26 |
 
 > Use **Ctrl+F** (Windows/Linux) or **⌘+F** (Mac) to search a project's two-letter code (as in the table above) for quick navigation.
+
+---
+---
+---
+
+## 📱 AutoContact [AC]
+> **Last Updated:** 11/1/26
+
+| Category | Information |
+|-----------|-------------|
+| **Project** | AutoContact |
+| **Type** | Contact Synchronization App |
+| **Platform** | iOS + Android (Flutter) |
+| **Built With** | Dart, Flutter, Next.js, TypeScript, Supabase, PostgreSQL |
+
+---
+
+**AutoContact** simplifies contact sharing and synchronization by allowing groups to maintain a shared roster that every member can import directly into their phone's native Contacts app. Users can create groups or join existing ones through short access codes, establish a reusable contact profile, and automatically access updated contact information from everyone in their group.
+
+The application combines a cross-platform Flutter mobile interface with a Next.js API and Supabase backend to securely manage authentication, group membership, and contact profiles. Its synchronization system intelligently adds new contacts and merges updated phone numbers, emails, and other details into existing entries without deleting information or overwriting saved names.
+
+By eliminating the need to manually exchange contact information, AutoContact makes keeping teams, organizations, and communities connected significantly easier.
+
+Visit the separate repo: [Click me!](https://github.com/aquatichan/ai-eng-fall-2026)
+
+### ✨ Features
+
+| | |
+|---|---|
+| 👥 | Create shared **group contact rosters** or join existing groups using unique access codes |
+| 📇 | Build a reusable **personal contact profile** that automatically appears across all your groups |
+| 🔄 | One-step **contact synchronization** that imports new members and merges updated information |
+| 🛡️ | Preserves existing contacts by **never deleting entries or renaming saved contacts** |
+| 🔐 | Google Sign-In authentication with **Supabase-managed user accounts** |
+| 📱 | Cross-platform mobile application supporting **both iOS and Android** |
+| 🔗 | Personal **QR codes** that let anyone scan and save your contact card without installing the app |
+| ⏱️ | Automatically refreshes group rosters every 10 seconds while open, with additional refresh-on-return and pull-to-refresh support |
+| ☁️ | Centralized backend powered by **Next.js, Supabase, and PostgreSQL** |
+| 🏷️ | Supports multiple phone numbers, email addresses, and additional contact details with customizable labels |
 
 ---
 ---
@@ -201,7 +241,6 @@ Read the full README.md for local setup/usage: [Click me!](Portfolix/README.md)
 | 📱 | Responsive interface with animated backgrounds and light/dark theme support |
 | 💡 | Fully static front-end powered by a generated **JSON** file with no backend required |
 | 🔄 | Easily regenerate documents anytime by rerunning the Python CLI |
-
 
 ---
 ---
