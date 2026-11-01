@@ -7,20 +7,12 @@ struct FeedView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if app.me?.needsReauth == true {
+                if app.status.needsReauth {
                     reauthBanner
                 }
 
                 statusRow
                 pageStrip
-
-                if let error = app.loadError {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(Theme.removed)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                }
 
                 if app.scans.isEmpty {
                     emptyState
@@ -52,28 +44,20 @@ struct FeedView: View {
         // the title entirely).
         .toolbarBackground(Theme.surface, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .refreshable { await app.refresh() }
-        // Re-read periodically so a scan that runs server-side while the app is
-        // open shows up on its own. Cancelled automatically when the view goes away.
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                if Task.isCancelled { break }
-                await app.refresh()
-            }
-        }
+        // Pull to refresh runs a real scan; there's no server to re-read from.
+        .refreshable { await app.scanNow() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await app.scanNow() }
                 } label: {
-                    if app.isRefreshing {
+                    if app.isScanning {
                         ProgressView().controlSize(.small).tint(Theme.accent)
                     } else {
                         Label("Scan now", systemImage: "arrow.clockwise")
                     }
                 }
-                .disabled(app.isRefreshing || app.me?.needsReauth == true)
+                .disabled(app.isScanning || !app.signedIn || app.status.needsReauth)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -99,17 +83,12 @@ struct FeedView: View {
 
     private var statusContent: some View {
         HStack(spacing: 6) {
-            if app.isRefreshing {
+            if app.isScanning {
                 ProgressView().controlSize(.mini).tint(Theme.textMuted)
             }
             Text(statusText)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            if app.me?.remotePush == false {
-                // Be honest about why alerts might be slow.
-                Image(systemName: "moon.zzz")
-                Text("background")
-            }
         }
         .font(.caption)
         .foregroundStyle(Theme.textMuted)
@@ -117,10 +96,8 @@ struct FeedView: View {
     }
 
     private var statusText: String {
-        let status = app.me?.runnerStatus ?? ""
-        if !status.isEmpty && status != "idle" { return status }
-        if app.isRefreshing { return "Starting scan…" }
-        return "Last scan \(Format.relative(app.me?.lastScanAt))"
+        if let progress = app.progress { return progress }
+        return "Last scan \(Format.relative(app.status.lastScanAt))"
     }
 
     private var reauthBanner: some View {

@@ -1,48 +1,60 @@
 import SwiftUI
 
-/// One page's timeline — the thing the desktop version could never do.
+/// One page's timeline: every distinct state it has been in, newest first.
 ///
-/// Because every scan now appends its own snapshot and screenshot instead of
-/// overwriting the last one, this can scrub back through every state the page has
-/// been in.
+/// A copy of the page is saved only when its content changes, so each stop on
+/// the scrubber is a real change, and it can be viewed as the page looked then.
 struct PageHistoryView: View {
     let pageKey: String
 
     @Environment(AppState.self) private var app
     @State private var entries: [HistoryEntry] = []
     @State private var selected: Int = 0
-    @State private var items: [ItemDTO]?
-    @State private var aspectRatio: CGFloat = 0.75
-    @State private var error: String?
+    @State private var items: [Item]?
+    @State private var html: String?
+    @State private var snapshotLoaded = false
+    @State private var tab: Tab = .page
     @State private var loaded = false
+
+    private enum Tab: String, CaseIterable {
+        case page = "Page"
+        case items = "Items"
+    }
 
     private var current: HistoryEntry? {
         entries.indices.contains(selected) ? entries[selected] : nil
     }
 
     private var title: String {
-        app.pages.first { $0.key == pageKey }?.label ?? "History"
+        entries.first?.label ?? Hirewheel.label(for: pageKey) ?? "History"
     }
 
     var body: some View {
         VStack(spacing: 0) {
             if !entries.isEmpty {
                 scrubber
+                Picker("View", selection: $tab) {
+                    ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
                 Divider().overlay(Theme.border)
             }
             content
         }
         .background(Theme.bg)
         .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Theme.surface, for: .navigationBar)
         .task { await loadHistory() }
-        .task(id: current?.snapshotID) { await loadItems() }
+        .task(id: current?.snapshotID) { await loadSnapshot() }
     }
 
     // MARK: - Pieces
 
-    /// Newest on the left, one tick per stored scan; a dot marks scans that
-    /// actually found something.
+    /// Newest on the left; a dot marks states that were a change from the one
+    /// before (the oldest is just where watching started).
     private var scrubber: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -80,10 +92,7 @@ struct PageHistoryView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let error {
-            Text(error).foregroundStyle(Theme.removed).padding()
-            Spacer()
-        } else if !loaded {
+        if !loaded {
             Spacer()
             ProgressView().tint(Theme.accent)
             Spacer()
@@ -91,69 +100,70 @@ struct PageHistoryView: View {
             Spacer()
             VStack(spacing: 6) {
                 Text("No history for this page yet.")
-                Text("It will fill in as scans run.")
+                Text("It fills in as scans run.")
             }
             .font(.callout)
             .multilineTextAlignment(.center)
             .foregroundStyle(Theme.textMuted)
             Spacer()
-        } else {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if let current {
-                        Text(caption(for: current))
-                            .font(.caption)
+        } else if let current {
+            switch tab {
+            case .page:
+                if let html {
+                    SnapshotPageView(snapshotID: current.snapshotID, html: html)
+                } else if !snapshotLoaded {
+                    Spacer()
+                    ProgressView().tint(Theme.accent)
+                    Spacer()
+                } else {
+                    Spacer()
+                    Text("This copy of the page is no longer stored.")
+                        .font(.caption).italic()
+                        .foregroundStyle(Theme.textMuted)
+                    Spacer()
+                }
+            case .items:
+                itemList(current)
+            }
+        }
+    }
+
+    private func itemList(_ entry: HistoryEntry) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(caption(for: entry))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+
+                if let items {
+                    if items.isEmpty {
+                        Text("Nothing on the page.")
+                            .font(.caption).italic()
                             .foregroundStyle(Theme.textMuted)
-
-                        if let path = current.screenshotPath {
-                            AuthedImage(path: path) { ratio in
-                                aspectRatio = ratio
-                            }
-                            .aspectRatio(aspectRatio, contentMode: .fit)
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else {
-                            Text("No screenshot stored for this scan.")
-                                .font(.caption).italic()
-                                .foregroundStyle(Theme.textMuted)
-                        }
-
-                        Text("Items at this time")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.text)
-                            .padding(.top, 8)
-
-                        if let items {
-                            if items.isEmpty {
-                                Text("Nothing on the page.")
-                                    .font(.caption).italic()
-                                    .foregroundStyle(Theme.textMuted)
-                            } else {
-                                ForEach(items) { item in
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.title)
-                                            .font(.subheadline)
-                                            .foregroundStyle(Theme.text)
-                                        if let detail = item.detail {
-                                            Text(detail)
-                                                .font(.caption)
-                                                .foregroundStyle(Theme.textMuted)
-                                                .lineLimit(2)
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(12)
-                                    .background(Theme.surface)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        ForEach(items) { item in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.text)
+                                if let detail = item.detail {
+                                    Text(detail)
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.textMuted)
+                                        .lineLimit(2)
                                 }
                             }
-                        } else {
-                            ProgressView().tint(Theme.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Theme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                     }
+                } else {
+                    ProgressView().tint(Theme.accent)
                 }
-                .padding(16)
             }
+            .padding(16)
         }
     }
 
@@ -168,19 +178,19 @@ struct PageHistoryView: View {
     // MARK: - Loading
 
     private func loadHistory() async {
-        guard let client = app.client, !loaded else { return }
-        do {
-            entries = try await client.history(pageKey: pageKey)
-            selected = 0
-        } catch {
-            self.error = error.localizedDescription
-        }
+        guard !loaded else { return }
+        entries = await LocalStore.shared.history(pageKey: pageKey)
+        selected = 0
         loaded = true
     }
 
-    private func loadItems() async {
-        guard let client = app.client, let current else { return }
+    private func loadSnapshot() async {
+        guard let current else { return }
         items = nil
-        items = (try? await client.snapshot(id: current.snapshotID))?.items ?? []
+        html = nil
+        snapshotLoaded = false
+        items = await LocalStore.shared.snapshotItems(id: current.snapshotID)
+        html = await LocalStore.shared.snapshotHTML(id: current.snapshotID)
+        snapshotLoaded = true
     }
 }

@@ -24,20 +24,20 @@ This portfolio is arranged by date of project creation.
 ---
 
 ## 📱 Hirewatch {Hirewheel Scraper, Mobile Version} [HM]
-> **Last Updated:** 9/23/26
+> **Last Updated:** 11/1/26
 
 | Category | Information |
 |-----------|-------------|
 | **Project** | Hirewatch {Hirewheel Scraper, Mobile Version} |
 | **Type** | Student Opportunity Scraper |
-| **Platform** | iOS App + Python Server |
-| **Built With** | Swift, SwiftUI, Python, FastAPI, Playwright, SQLite, Docker, Fly.io |
+| **Platform** | iOS App |
+| **Built With** | Swift, SwiftUI, WebKit, libxml2 (original server version: Python, FastAPI, Playwright, SQLite, Docker) |
 
 ---
 
-**Hirewatch** takes the desktop watcher's core idea — quietly scan Hirewheel and surface only what changed — and moves the alert to where students actually look: their phone. Since no mobile OS lets an app run a background browser, the project splits into a native SwiftUI client and a small Python/FastAPI server that does the real scanning, signs in through its own controlled browser, and never lets a password touch the app.
+**Hirewatch** takes the desktop watcher's core idea — quietly scan Hirewheel and surface only what changed — and moves it to where students actually look: their phone. The whole thing runs on the iPhone. You sign in on Hirewheel's own login page inside the app, and the phone fetches your pages, runs the extractors, works out what changed, keeps the history, and sends the notification itself. There is no server to host and nothing to pay for.
 
-Rebuilding the storage layer for a server unlocked something the desktop version never had: every scan is kept instead of overwritten, so the app can scrub back through a full history — items *and* a full-page screenshot — for any past scan. On the live account this has run against, that means **23 pages watched per scan** (the original 11, plus Program Hub and Marketplace tabs that turned out to be separate pages, plus a small, deliberately bounded crawl into newsletter and event detail pages) pulling **250+ real items**, with Learning Modules' 188 sub-pages intentionally left uncrawled to keep a scan fast. Accounts are keyed to your Hirewheel login, so signing out and back in — or moving to a new phone — brings your full history with you, while a different person signing in on the same phone gets a separate account.
+It started as a SwiftUI app paired with a Python/FastAPI server that drove a real browser. That turned out to be unnecessary, because Hirewheel's pages are server-rendered and a plain HTTPS request with the session cookie already returns everything the extractors need. The extractors were ported to Swift on top of the HTML parser built into iOS and checked against the Python originals, with identical output on every test sample. The app watches **23 pages per scan** (the original 11, plus Program Hub and Marketplace tabs that turned out to be separate pages, plus a small, deliberately bounded crawl into newsletter and event detail pages), with Learning Modules' 188 sub-pages intentionally left uncrawled to keep a scan fast.
 
 *Unofficial and independent — not affiliated with or endorsed by Code2College.*
 
@@ -47,15 +47,13 @@ Read the full README.md for local setup/usage: **[Click me!](hirewheel_scraper_m
 
 | | |
 |---|---|
-| 📲 | Native **SwiftUI** app paired with a **FastAPI** server, since scanning has to happen server-side — no phone OS permits a background browser |
-| 🕰️ | **Append-only scan history** with a scrubbable timeline: every past scan's items and full-page screenshot stay browsable, not just the latest |
-| 🧩 | Watches **23 pages per scan** — the 11 original ones, Program Hub/Marketplace tabs discovered to be separate URLs, and a capped crawl of newsletter and event detail pages (188 Learning Modules deliberately skipped) |
-| 🔔 | Scans every **3 hours** and sends one grouped notification per scan ("Hirewheel — 3 updates"). Each phone tells the server which APNs gateway its build uses, so development and TestFlight builds both get push from the same server, with a background-refresh fallback when push is off |
-| 🔐 | The password never touches the app — sign-in happens in a server-controlled browser, and only the resulting session is stored, encrypted at rest |
-| 👤 | Accounts follow your **Hirewheel login**: sign out and back in, or switch phones, and your history comes with you — while someone else signing in on your phone gets their own separate account |
-| 🚀 | **Separate production and sandbox setups**: TestFlight builds use a hosted server on Fly.io, reached over one HTTPS address with the Hirewheel sign-in streamed through the API itself, and the server refuses to boot with laptop-only settings. Development builds keep using a local server |
+| 📲 | Native **SwiftUI** app that does everything on the phone: sign-in, scanning, diffing, history and notifications, with no server and no third-party code |
+| 🕰️ | **Browsable history**: a copy of each page is saved whenever it changes, so you can step back through every state it has been in and see the page as it looked |
+| 🧩 | Watches **23 pages per scan**: the 11 original ones, Program Hub/Marketplace tabs discovered to be separate URLs, and a capped crawl of newsletter and event detail pages (188 Learning Modules deliberately skipped) |
+| 🔔 | Scans on open, on pull-to-refresh, and in the background, then sends one grouped notification per scan ("Hirewheel — 3 updates"), with per-page mutes |
+| 🧱 | A small **CSS-selector engine on top of iOS's built-in libxml2** stands in for BeautifulSoup, so the extractors port line for line with nothing to download |
 | 🌓 | Full **light and dark mode** built on semantic color tokens rather than one hardcoded palette |
-| 🧪 | Backed by **11 Python test modules** covering extraction, diffing, the storage layer, account identity, push routing, the hosted sign-in relay, and the bounds on detail-page discovery |
+| 🧪 | Swift extractors checked against the Python originals (25/25 identical outputs), and the original server's **11 Python test modules** remain the reference for extraction, diffing and detail-page bounds |
 | 📄 | Ships its own **Terms of Service and Privacy Policy**, written to be explicit that this is an unofficial, independent tool |
 
 ---
@@ -117,7 +115,7 @@ Read the full README.md: **[Click me!](mathexplained-discord-bot/README.md)**
 
 Using a persistent Playwright browser session, the scraper securely reuses the user's own authenticated login (including MFA) without storing credentials. A built-in Tkinter dashboard groups detected changes by page and displays screenshots of each modified page, making it easy to review internship opportunities, marketplace projects, surveys, notifications, events, and news at a glance.
 
-Read the full README.md for local setup/usage: **[Click me!](hirewheel_scraper_web/README.md)**
+Read the full README.md for local setup/usage: **[Click me!](hirewheel_scraper_des/README.md)**
 
 Its item model, diff engine, and page extractors were later carried over byte-for-byte into **Hirewatch**, the mobile version above, where they've since been run against live Hirewheel data.
 

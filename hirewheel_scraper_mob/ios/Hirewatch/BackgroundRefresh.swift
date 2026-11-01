@@ -1,26 +1,16 @@
 import BackgroundTasks
 import Foundation
 
-/// The no-Apple-account delivery path.
+/// Scanning while the app isn't open.
 ///
-/// iOS periodically grants the app a short window; we use it to ask the server
-/// for its latest scans and raise a local notification if anything is new since
-/// the last one we told the user about. This is strictly worse than real push —
-/// iOS decides when (and whether) to wake us, so alerts can lag — but it needs no
-/// paid account, and it is a genuine improvement over a Tkinter window on a Mac.
-///
-/// Once `Me.remotePush` is true, this stops posting notifications and just keeps
-/// the local "last seen" marker fresh, so the two paths never double-notify.
+/// iOS periodically grants the app a short window (around 30 seconds) and the
+/// whole scan runs in it: pages are fetched in parallel, so it fits. iOS decides
+/// when — and whether — that happens, based on how often the app is used, so
+/// it is typically every few hours rather than on a fixed schedule. Opening the
+/// app also scans if the last one is stale (see `AppState.scanIfStale`).
 enum BackgroundRefresh {
     /// Must match BGTaskSchedulerPermittedIdentifiers in Info.plist.
     static let taskIdentifier = (Bundle.main.bundleIdentifier ?? "com.aaronqin.hirewatch") + ".refresh"
-
-    private static let lastSeenKey = "hw.lastSeenScanID"
-
-    static var lastSeenScanID: Int {
-        get { UserDefaults.standard.integer(forKey: lastSeenKey) }
-        set { UserDefaults.standard.set(newValue, forKey: lastSeenKey) }
-    }
 
     /// `BGAppRefreshTask` predates `Sendable` and isn't marked as such, so Swift 6
     /// refuses to let it reach the async work that eventually completes it. We
@@ -60,46 +50,19 @@ enum BackgroundRefresh {
         schedule()
 
         let work = Task { @MainActor in
-            let newCount = await checkForUpdates()
-            boxed.task.setTaskCompleted(success: newCount >= 0)
+            let outcome = await runOnce()
+            boxed.task.setTaskCompleted(success: outcome?.status == "ok")
         }
-        // `Task` is Sendable, so the system may fire this from any thread safely.
+        // Cancelling stops the in-flight fetches; the scan records what it got.
         boxed.task.expirationHandler = { work.cancel() }
     }
 
-    /// Returns how many new scans were found, or -1 on failure.
+    /// One scan, announced. Returns nil if there was nothing to scan with.
+    @MainActor
     @discardableResult
-    static func checkForUpdates() async -> Int {
-        guard let session = SessionStore.load() else { return -1 }
-        let client = APIClient(session: session)
-
-        do {
-            let me = try await client.me()
-            let scans = try await client.scans(limit: 20)
-
-            let fresh = scans.filter { $0.id > lastSeenScanID && !$0.failed && $0.changeCount > 0 }
-            // Move the marker regardless, so a backlog of old scans can't cause a
-            // burst of notifications later.
-            if let newest = scans.first?.id, newest > lastSeenScanID {
-                lastSeenScanID = newest
-            }
-
-            // When APNs is live the server already notified; don't double up.
-            guard !me.remotePush, let latest = fresh.first else { return fresh.count }
-
-            let total = fresh.reduce(0) { $0 + $1.changeCount }
-            let detail = try? await client.scan(id: latest.id)
-            let labels = detail?.changedPages.map(\.label) ?? []
-
-            await NotificationManager.shared.postLocal(
-                title: "Hirewheel — \(Format.plural(total, "update"))",
-                body: labels.isEmpty ? "Tap to see what changed." : labels.joined(separator: ", "),
-                scanID: latest.id
-            )
-            return fresh.count
-        } catch {
-            print("[bg] refresh failed: \(error)")
-            return -1
-        }
+    static func runOnce() async -> ScanOutcome? {
+        guard let outcome = await Scanner.shared.run() else { return nil }
+        await NotificationManager.shared.announce(outcome)
+        return outcome
     }
 }

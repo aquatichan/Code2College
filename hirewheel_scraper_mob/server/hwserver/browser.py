@@ -70,8 +70,10 @@ class UserBrowser:
         *,
         headless: bool = True,
         display: str | None = None,
+        screen: tuple[int, int] = (520, 920),
     ):
         self.headless = headless
+        self.screen = screen
         # X display for headful runs on a virtual screen (the hosted login flow).
         self.display = display
         self._initial_state = storage_state
@@ -91,10 +93,24 @@ class UserBrowser:
     def start(self) -> None:
         self._pw = sync_playwright().start()
         launch_env = {**os.environ, "DISPLAY": self.display} if self.display else None
-        self._browser = self._pw.chromium.launch(headless=self.headless, env=launch_env)
+        # On the streamed sign-in display, size the window to the whole
+        # (phone-sized) screen; a desktop-sized one shrinks to unreadable text.
+        # There is no window manager on the virtual display, so --kiosk does
+        # nothing and the size has to be explicit.
+        streamed = self.display is not None
+        self._browser = self._pw.chromium.launch(
+            headless=self.headless,
+            env=launch_env,
+            args=["--window-position=0,0", f"--window-size={self.screen[0]},{self.screen[1]}"]
+            if streamed
+            else [],
+        )
         self._ctx = self._browser.new_context(
             storage_state=self._initial_state,
-            viewport={"width": 1512, "height": 900},
+            # Leave room under the window for the tab strip and address bar.
+            viewport={"width": self.screen[0], "height": self.screen[1] - 110}
+            if streamed
+            else {"width": 1512, "height": 900},
         )
         self._ctx.set_default_timeout(config.PAGE_TIMEOUT_MS)
         self._page = self._ctx.new_page()

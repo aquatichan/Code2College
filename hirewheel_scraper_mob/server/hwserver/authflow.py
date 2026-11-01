@@ -73,6 +73,12 @@ class _Display:
         self.procs.clear()
 
 
+# Phone-shaped, so the stream is legible without pinch-zooming and Hirewheel
+# serves its narrow layout.
+# Chromium won't shrink its window below ~500px, so the screen is a little wider
+# than a phone and the page inside it is laid out at that width.
+SCREEN_SIZE = "520x920x24"
+
 _NOVNC_BINARIES = ("Xvfb", "x11vnc")
 
 
@@ -108,7 +114,7 @@ def _start_display() -> _Display:
 
     disp.procs.append(
         subprocess.Popen(
-            ["Xvfb", f":{number}", "-screen", "0", "1512x900x24", "-nolisten", "tcp"],
+            ["Xvfb", f":{number}", "-screen", "0", SCREEN_SIZE, "-nolisten", "tcp"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

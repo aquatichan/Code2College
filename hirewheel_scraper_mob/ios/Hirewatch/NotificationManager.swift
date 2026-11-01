@@ -2,19 +2,11 @@ import Foundation
 import UIKit
 import UserNotifications
 
-/// Notification permission, APNs registration, and taps.
+/// Notification permission, posting, and taps.
 ///
-/// Two delivery paths, because a paid Apple Developer account is not yet in play:
-///
-/// * **Remote push (APNs)** — the real thing. Needs the paid account plus a .p8
-///   key on the server. Instant, works with the app closed.
-/// * **Background refresh + local notification** — the fallback that works today.
-///   iOS wakes the app occasionally, it asks the server what's new, and raises a
-///   notification itself. No account needed, but iOS decides the timing, so an
-///   alert can lag well behind the scan that produced it.
-///
-/// The server reports which one is live via `Me.remotePush`, so the app does not
-/// have to guess.
+/// Every notification is local: the phone runs the scan itself, so it already
+/// knows what changed and has nobody to wait on. No push server, no Apple
+/// push key, no paid account.
 @MainActor
 final class NotificationManager: NSObject {
     static let shared = NotificationManager()
@@ -29,38 +21,48 @@ final class NotificationManager: NSObject {
         UNUserNotificationCenter.current().delegate = self
     }
 
-    /// Ask once, then register with APNs if allowed.
+    @discardableResult
     func requestAuthorization() async -> Bool {
-        let center = UNUserNotificationCenter.current()
         do {
-            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
-            if granted {
-                // Harmless when the app has no push entitlement yet: the delegate
-                // simply reports a registration failure and the fallback carries on.
-                UIApplication.shared.registerForRemoteNotifications()
-            }
-            return granted
+            return try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
             print("[notify] authorization failed: \(error)")
             return false
         }
     }
 
-    /// Raise a notification locally — the fallback path when APNs isn't wired.
-    func postLocal(title: String, body: String, scanID: Int?) async {
+    /// Tell the user what a scan found, if it found anything they want to hear about.
+    func announce(_ outcome: ScanOutcome) async {
+        if outcome.becameSignedOut {
+            await post(
+                title: "Hirewatch is signed out",
+                body: "Your Hirewheel session expired. Tap to sign in again.",
+                userInfo: ["type": "reauth"],
+                id: "reauth"
+            )
+        } else if outcome.notifiableChanges > 0 {
+            await post(
+                title: "Hirewheel — \(Format.plural(outcome.notifiableChanges, "update"))",
+                body: outcome.changedLabels.isEmpty
+                    ? "Tap to see what changed."
+                    : outcome.changedLabels.joined(separator: ", "),
+                userInfo: ["type": "cycle", "scan_id": outcome.scanID],
+                id: "scan-\(outcome.scanID)"
+            )
+        }
+    }
+
+    private func post(title: String, body: String, userInfo: [String: Any], id: String) async {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
         content.threadIdentifier = "hirewheel-updates"
-        if let scanID { content.userInfo = ["type": "cycle", "scan_id": scanID] }
+        content.userInfo = userInfo
 
         // nil trigger delivers immediately.
-        let request = UNNotificationRequest(
-            identifier: scanID.map { "scan-\($0)" } ?? UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         try? await UNUserNotificationCenter.current().add(request)
     }
 
@@ -72,8 +74,6 @@ final class NotificationManager: NSObject {
             return
         }
         if let scanID = userInfo["scan_id"] as? Int {
-            onOpenScan?(scanID)
-        } else if let raw = userInfo["scan_id"] as? String, let scanID = Int(raw) {
             onOpenScan?(scanID)
         }
     }

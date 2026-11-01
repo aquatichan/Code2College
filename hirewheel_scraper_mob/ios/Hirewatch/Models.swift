@@ -1,9 +1,10 @@
+import CryptoKit
 import Foundation
 
 // MARK: - JSON values
 
-/// An extractor's `fields` dictionary is deliberately open-ended on the server —
-/// a notification carries a body and timestamp, a survey carries a status, and so
+/// An extractor's `fields` dictionary is deliberately open-ended — a
+/// notification carries a body and timestamp, a survey carries a status, and so
 /// on. This models that without forcing every page into one shape.
 enum JSONValue: Codable, Sendable, Hashable {
     case string(String)
@@ -64,80 +65,33 @@ enum JSONValue: Codable, Sendable, Hashable {
             return nil
         }
     }
-}
 
-// MARK: - API payloads
-
-struct Me: Codable, Sendable {
-    let userID: String
-    let label: String
-    /// The Hirewheel login email, read from the account page at sign-in.
-    let email: String?
-    let needsReauth: Bool
-    let intervalSeconds: Int
-    let lastScanAt: String?
-    let runnerStatus: String
-    let mutedPages: [String]
-    let loginMode: String
-    /// False when the server has no APNs credentials, which is the app's cue to
-    /// run its own background-refresh fallback instead of waiting for push.
-    let remotePush: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case label
-        case email
-        case needsReauth = "needs_reauth"
-        case intervalSeconds = "interval_seconds"
-        case lastScanAt = "last_scan_at"
-        case runnerStatus = "runner_status"
-        case mutedPages = "muted_pages"
-        case loginMode = "login_mode"
-        case remotePush = "remote_push"
-    }
-}
-
-struct EnrollResponse: Codable, Sendable {
-    let userID: String
-    let deviceID: String
-    let deviceToken: String
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case deviceID = "device_id"
-        case deviceToken = "device_token"
-    }
-}
-
-struct PageInfo: Codable, Sendable, Identifiable, Hashable {
-    let key: String
-    let label: String
-    let url: String
-
-    var id: String { key }
-}
-
-struct ScanSummary: Codable, Sendable, Identifiable, Hashable {
-    let id: Int
-    let startedAt: String
-    let finishedAt: String?
-    let status: String
-    let error: String?
-    let changeCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case startedAt = "started_at"
-        case finishedAt = "finished_at"
-        case status
-        case error
-        case changeCount = "change_count"
+    // Field builders for extractors. Each returns nil for an empty value, and
+    // `Item.make` drops nils, so "no body" and "empty body" hash the same.
+    static func text(_ value: String?) -> JSONValue? {
+        guard let value, !value.isEmpty else { return nil }
+        return .string(value)
     }
 
-    var failed: Bool { status == "error" || status == "auth_needed" }
+    static func list(_ values: [String]) -> JSONValue? {
+        values.isEmpty ? nil : .array(values.map(JSONValue.string))
+    }
+
+    static func int(_ value: Int) -> JSONValue? { .number(Double(value)) }
 }
 
-struct ItemDTO: Codable, Sendable, Hashable, Identifiable {
+// MARK: - Items
+
+/// One thing on a page: a notification, a project card, a survey row, etc.
+///
+/// `uid` is the stable identity used to tell items apart across scans. Prefer a
+/// real id from the page (data-notif-id, an href); otherwise one is derived from
+/// the title.
+///
+/// `fields` holds the meaningful, human-visible content. Its hash decides
+/// whether an item *changed* between scans, so only signal goes in — never
+/// volatile noise like "2 minutes ago".
+struct Item: Codable, Sendable, Hashable, Identifiable {
     let uid: String
     let kind: String
     let title: String
@@ -146,6 +100,22 @@ struct ItemDTO: Codable, Sendable, Hashable, Identifiable {
 
     var id: String { uid }
 
+    static func make(
+        _ kind: String,
+        _ title: String,
+        uid: String? = nil,
+        _ fields: [String: JSONValue?] = [:]
+    ) -> Item {
+        let clean = fields.compactMapValues { $0 }
+        return Item(
+            uid: uid ?? "\(kind):\(slug(title))",
+            kind: kind,
+            title: title,
+            fields: clean,
+            hash: contentHash(title: title, fields: clean)
+        )
+    }
+
     /// The single most useful supporting line for this item, if it has one.
     var detail: String? {
         for key in ["body", "detail", "status", "ts"] {
@@ -153,18 +123,46 @@ struct ItemDTO: Codable, Sendable, Hashable, Identifiable {
         }
         return nil
     }
+
+    private static let hashEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
+
+    private static func contentHash(title: String, fields: [String: JSONValue]) -> String {
+        let payload = (try? hashEncoder.encode(fields)) ?? Data()
+        var hasher = Insecure.SHA1()
+        hasher.update(data: payload)
+        hasher.update(data: Data("||\(title)".utf8))
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
 }
 
-struct ChangedItemDTO: Codable, Sendable, Hashable, Identifiable {
-    let item: ItemDTO
+/// A stable, URL-safe id derived from text (the fallback when no real id exists).
+func slug(_ text: String) -> String {
+    let lowered = text.split(whereSeparator: \.isWhitespace).joined(separator: " ").lowercased()
+    var out = ""
+    var pendingDash = false
+    for scalar in lowered.unicodeScalars {
+        if ("a"..."z").contains(scalar) || ("0"..."9").contains(scalar) {
+            if pendingDash && !out.isEmpty { out.append("-") }
+            out.unicodeScalars.append(scalar)
+            pendingDash = false
+        } else {
+            pendingDash = true
+        }
+    }
+    let capped = String(out.prefix(80))
+    return capped.isEmpty ? "item" : capped
+}
+
+struct ItemChange: Codable, Sendable, Hashable, Identifiable {
+    let item: Item
+    /// field -> [before, after]
     let changedFields: [String: [JSONValue]]
 
     var id: String { item.uid }
-
-    enum CodingKeys: String, CodingKey {
-        case item
-        case changedFields = "changed_fields"
-    }
 
     /// (field, before, after) triples, ordered so the UI is stable across renders.
     var deltas: [(field: String, before: String, after: String)] {
@@ -179,128 +177,99 @@ struct ChangedItemDTO: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
-struct PageDiffDTO: Codable, Sendable, Hashable, Identifiable {
+// MARK: - Scans
+
+/// What one scan found on one page.
+struct PageDiff: Codable, Sendable, Hashable, Identifiable {
     let pageKey: String
     let label: String
-    let added: [ItemDTO]
-    let removed: [ItemDTO]
-    let changed: [ChangedItemDTO]
-    let count: Int
-    let firstRun: Bool
-    let screenshotPath: String?
+    /// The listing a detail page was found on ("news" for "news:364").
+    var parentKey: String?
+    var added: [Item] = []
+    var removed: [Item] = []
+    var changed: [ItemChange] = []
+    var itemCount = 0
+    /// No earlier copy of this page existed, so this scan recorded it silently.
+    var firstRun = false
+    /// The stored copy of the page, saved whenever its content changed.
+    var snapshotID: Int?
+    var error: String?
 
     var id: String { pageKey }
-
-    enum CodingKeys: String, CodingKey {
-        case pageKey = "page_key"
-        case label
-        case added
-        case removed
-        case changed
-        case count
-        case firstRun = "first_run"
-        case screenshotPath = "screenshot_path"
-    }
+    var count: Int { added.count + removed.count + changed.count }
 }
 
-struct ScanDetail: Codable, Sendable {
+struct ScanSummary: Sendable, Identifiable, Hashable {
     let id: Int
     let startedAt: String
     let finishedAt: String?
     let status: String
     let error: String?
     let changeCount: Int
-    let pages: [PageDiffDTO]
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case startedAt = "started_at"
-        case finishedAt = "finished_at"
-        case status
-        case error
-        case changeCount = "change_count"
-        case pages
-    }
-
-    var changedPages: [PageDiffDTO] { pages.filter { $0.count > 0 } }
+    var failed: Bool { status == "error" || status == "auth_needed" }
 }
 
-struct HistoryEntry: Codable, Sendable, Identifiable, Hashable {
+/// One scan in full, as stored on the phone.
+struct ScanDetail: Codable, Sendable, Identifiable {
+    let id: Int
+    let startedAt: String
+    var finishedAt: String?
+    var status: String
+    var error: String?
+    var pages: [PageDiff] = []
+
+    var changeCount: Int { pages.reduce(0) { $0 + $1.count } }
+    var changedPages: [PageDiff] { pages.filter { $0.count > 0 } }
+
+    var summary: ScanSummary {
+        ScanSummary(
+            id: id, startedAt: startedAt, finishedAt: finishedAt,
+            status: status, error: error, changeCount: changeCount
+        )
+    }
+}
+
+/// One distinct state a page has been in. A new one is recorded only when the
+/// page's content changes, so the timeline shows real changes, not repeats.
+struct HistoryEntry: Sendable, Identifiable, Hashable {
     let snapshotID: Int
     let scanID: Int
     let capturedAt: String
+    let label: String
     let itemCount: Int
     let changeCount: Int
-    let screenshotPath: String?
 
     var id: Int { snapshotID }
-
-    enum CodingKeys: String, CodingKey {
-        case snapshotID = "snapshot_id"
-        case scanID = "scan_id"
-        case capturedAt = "captured_at"
-        case itemCount = "item_count"
-        case changeCount = "change_count"
-        case screenshotPath = "screenshot_path"
-    }
 }
 
-struct SnapshotDetail: Codable, Sendable {
-    let snapshotID: Int
-    let items: [ItemDTO]
+struct PageInfo: Sendable, Identifiable, Hashable {
+    let key: String
+    let label: String
+    let url: URL
 
-    enum CodingKeys: String, CodingKey {
-        case snapshotID = "snapshot_id"
-        case items
-    }
-}
-
-struct LoginStart: Codable, Sendable {
-    let sessionID: String
-    let loginURL: String
-    let mode: String
-
-    enum CodingKeys: String, CodingKey {
-        case sessionID = "session_id"
-        case loginURL = "login_url"
-        case mode
-    }
-}
-
-struct LoginStatus: Codable, Sendable {
-    let sessionID: String
-    let status: String
-    let detail: String?
-    let loginURL: String?
-
-    enum CodingKeys: String, CodingKey {
-        case sessionID = "session_id"
-        case status
-        case detail
-        case loginURL = "login_url"
-    }
-
-    var isPending: Bool { status == "pending" }
-    var isAuthenticated: Bool { status == "authenticated" }
+    var id: String { key }
 }
 
 // MARK: - Date helpers
 
 enum Format {
-    /// The server emits Python's `datetime.isoformat()`, which looks like
-    /// `2026-09-12T21:02:33.371011+00:00` — a colon in the UTC offset, and
-    /// fractional seconds only when they happen to be non-zero. So both shapes
-    /// have to be accepted.
+    /// Stored timestamps are ISO 8601. Fractional seconds and a colon in the
+    /// offset are both accepted, in case an older value carries them.
     ///
     /// `ISO8601DateFormatter` would be the obvious tool but it is a non-Sendable
     /// class, which Swift 6 refuses to let us share as a static. `ISO8601FormatStyle`
     /// is a Sendable value type and parses the same thing.
     private static let parseStrategies: [Date.ISO8601FormatStyle] = [
+        .init(includingFractionalSeconds: false),
+        .init(includingFractionalSeconds: true),
         .init(timeZoneSeparator: .colon, includingFractionalSeconds: true),
         .init(timeZoneSeparator: .colon, includingFractionalSeconds: false),
-        .init(includingFractionalSeconds: true),
-        .init(includingFractionalSeconds: false),
     ]
+
+    static func stamp(_ date: Date = .now) -> String {
+        date.formatted(.iso8601)
+    }
 
     static func date(from string: String?) -> Date? {
         guard let string else { return nil }

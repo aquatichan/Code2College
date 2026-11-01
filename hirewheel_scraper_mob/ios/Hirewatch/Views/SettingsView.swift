@@ -5,7 +5,6 @@ struct SettingsView: View {
     @Environment(AppState.self) private var app
 
     @State private var muted: Set<String> = []
-    @State private var error: String?
     @State private var showDeleteConfirm = false
     @State private var loaded = false
 
@@ -24,20 +23,10 @@ struct SettingsView: View {
                 sectionTitle("Notify me about")
                 mutesCard
 
-                if app.me?.remotePush == false {
-                    Text("Remote push isn't configured on your server, so this app checks for updates in the background instead. iOS decides when that happens, so alerts can arrive late.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textMuted)
-                }
-
-                if let error {
-                    Text(error).font(.caption).foregroundStyle(Theme.removed)
-                }
-
                 signOutButton
                 deleteButton
 
-                Text("Your Hirewheel session is stored encrypted on your server so it can scan while your phone is asleep. Deleting your account removes it immediately.")
+                Text("Everything stays on this phone: your Hirewheel session is in the Keychain, and scans and saved pages are in the app's own storage. Nothing is sent anywhere except Hirewheel itself.")
                     .font(.caption)
                     .foregroundStyle(Theme.textMuted)
                     .padding(.top, 4)
@@ -50,12 +39,12 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .toolbarBackground(Theme.surface, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .task { load() }
+        .task { await load() }
         .alert("Delete everything?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { Task { await deleteAccount() } }
         } message: {
-            Text("This erases your stored Hirewheel session, every scan, and every screenshot. It cannot be undone.")
+            Text("This signs you out and erases every scan and saved page on this phone. It cannot be undone.")
         }
     }
 
@@ -73,12 +62,12 @@ struct SettingsView: View {
             Text("Signed in as")
                 .font(.caption)
                 .foregroundStyle(Theme.textMuted)
-            Text(app.me?.email ?? "—")
+            Text(app.status.email ?? "—")
                 .font(.subheadline)
                 .foregroundStyle(Theme.text)
                 .textSelection(.enabled)
-            if app.me?.email == nil {
-                Text("Your email appears here after signing in to Hirewheel.")
+            if app.status.email == nil {
+                Text("Your email appears here after the first scan.")
                     .font(.caption2)
                     .foregroundStyle(Theme.textMuted)
             }
@@ -103,10 +92,10 @@ struct SettingsView: View {
 
     private var scheduleCard: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Every \((app.me?.intervalSeconds ?? 3 * 3600) / 3600) hours")
+            Text("On this phone, in the background")
                 .font(.subheadline)
                 .foregroundStyle(Theme.text)
-            Text("Your pages are checked on this schedule automatically. Tap the refresh button on the main screen to scan right now.")
+            Text("Hirewatch checks when you open it (if it's been 30 minutes) and whenever iOS gives it background time, usually every few hours. iOS gives more time to apps you use often, so opening it now and then helps. Pull down on the main screen to check right now.")
                 .font(.caption)
                 .foregroundStyle(Theme.textMuted)
         }
@@ -142,18 +131,17 @@ struct SettingsView: View {
         Binding(
             get: { !muted.contains(key) },
             set: { notify in
-                let previous = muted
                 if notify { muted.remove(key) } else { muted.insert(key) }
-                Task { await saveMutes(rollbackTo: previous) }
+                Task { await LocalStore.shared.setMutedPages(Array(muted)) }
             }
         )
     }
 
     private var signOutButton: some View {
         Button {
-            Task { await app.signOutOfDevice() }
+            Task { await app.signOut() }
         } label: {
-            Text("Sign out of this device")
+            Text("Sign out of Hirewheel")
                 .font(.subheadline)
                 .foregroundStyle(Theme.text)
                 .frame(maxWidth: .infinity)
@@ -168,7 +156,7 @@ struct SettingsView: View {
         Button {
             showDeleteConfirm = true
         } label: {
-            Text("Delete my account and all data")
+            Text("Sign out and delete all data")
                 .font(.subheadline.bold())
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -209,29 +197,15 @@ struct SettingsView: View {
 
     // MARK: - Actions
 
-    private func load() {
-        guard !loaded, let me = app.me else { return }
-        muted = Set(me.mutedPages)
+    /// Read from the store, not `app.status`, which is only as fresh as the
+    /// last refresh and may predate a toggle made a moment ago.
+    private func load() async {
+        guard !loaded else { return }
+        muted = Set(await LocalStore.shared.status().mutedPages)
         loaded = true
     }
 
-    private func saveMutes(rollbackTo previous: Set<String>) async {
-        guard let client = app.client else { return }
-        do {
-            try await client.setMutedPages(Array(muted))
-        } catch {
-            // Put the switch back where the server still believes it is.
-            muted = previous
-            self.error = error.localizedDescription
-        }
-    }
-
-
     private func deleteAccount() async {
-        if let client = app.client {
-            // Even if the call fails, sign out locally — the user asked to leave.
-            _ = try? await client.deleteAccount()
-        }
-        app.signOut()
+        await app.deleteEverything()
     }
 }

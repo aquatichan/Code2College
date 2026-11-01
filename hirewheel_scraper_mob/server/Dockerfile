@@ -19,7 +19,7 @@ COPY requirements.txt .
 # Pin Playwright to the image's version: its bundled Chromium only matches that
 # exact release, and a newer pip install would look for a browser that isn't there.
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
-RUN pip install --no-cache-dir -r requirements.txt "playwright==1.61.0"
+RUN pip install --no-cache-dir --ignore-installed typing_extensions -r requirements.txt "playwright==1.61.0"
 
 COPY hwcore ./hwcore
 COPY hwserver ./hwserver

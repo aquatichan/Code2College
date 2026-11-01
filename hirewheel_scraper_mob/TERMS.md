@@ -1,6 +1,6 @@
 # Terms of Service — Hirewatch
 
-**Last updated: 23 September 2026**
+**Last updated: 1 November 2026**
 
 By using Hirewatch you agree to these terms. If you do not, delete the app.
 
@@ -32,29 +32,28 @@ Two things follow, and they are practical rather than theoretical:
 - Their Security page also describes **rate limiting on authentication and API
   endpoints**. Scanning aggressively can trip it and affect your own account.
 
-**Using it for your own account is a decision about your own data.** Running the
-server for other students is different: you are then holding someone else's
-HireWheel session and a copy of their educational records. Get written permission
-from Code2College before doing that, and informed guardian consent for anyone
-under 18.
+**Using it for your own account is a decision about your own data.** Each person
+who installs the app signs in to their own account on their own phone, and their
+data stays there. Handing the app out is still a question for Code2College, so
+ask them before sharing it widely.
 
 ## 3. Your responsibilities
 
 You agree to:
 
 - use only your own HireWheel account, and never another person's credentials;
-- not modify the app or server to scan more often than its fixed schedule, or
-  otherwise place unusual load on HireWheel;
+- not modify the app to scan more often than it does, or otherwise place
+  unusual load on HireWheel;
 - stop using the app if Code2College asks you to;
 - accept that you remain bound by whatever agreements you made with Code2College
   when you registered, and that this app does not alter them.
 
-## 4. If you run the server for others
+## 4. If you run the optional server for others
 
-You become the data controller for every account you host, with real obligations:
-protecting the encryption key, honoring deletion requests, and telling users if
-their data is exposed. Enrollment is invite-gated for this reason. Do not open it
-to people you cannot support.
+The repository also contains an older server-based version that the app no longer
+uses. If you run it for other people, you become the data controller for every
+account it holds, with real obligations: protecting the encryption key, honoring
+deletion requests, and telling users if their data is exposed.
 
 ## 5. No warranty
 
@@ -62,8 +61,8 @@ The app is provided **"as is", without warranty of any kind**. In particular:
 
 - HireWheel can change its pages at any time, which will break detection until
   the extractors are updated;
-- notifications are best-effort and may be delayed or missed — when remote push
-  is unavailable, delivery depends on when iOS chooses to run background refresh;
+- notifications are best-effort and may be delayed or missed: background scans
+  run only when iOS chooses to allow them, which can be hours apart;
 - the app may miss a change, report one that did not happen, or stop working
   entirely.
 
@@ -80,8 +79,8 @@ limited to the maximum extent the law allows.
 
 ## 7. Termination
 
-Stop at any time by deleting your account in Settings, which erases your data
-immediately. The operator of a server may discontinue it at any time.
+Stop at any time with **Sign out and delete all data** in Settings, which erases
+your data from the phone immediately, or by deleting the app.
 
 ## 8. Changes
 

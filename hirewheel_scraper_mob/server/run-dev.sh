@@ -8,10 +8,29 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# This script owns its own virtual environment under .venv/, independent of
+# whatever Python or venv happens to be active in the calling shell. That way
+# `./run-dev.sh` always works the same, with no manual `pip install` or venv
+# activation step, and never fights macOS's "externally-managed-environment"
+# protection on the system Python.
+VENV_PY=".venv/bin/python3"
+if [ ! -x "$VENV_PY" ]; then
+    echo "→ first run: creating .venv"
+    python3 -m venv .venv
+fi
+
+STAMP=".venv/.requirements.sha256"
+if [ ! -f "$STAMP" ] || ! shasum -a 256 -c "$STAMP" >/dev/null 2>&1; then
+    echo "→ installing dependencies into .venv (this takes a minute)"
+    "$VENV_PY" -m pip install --quiet --upgrade pip
+    "$VENV_PY" -m pip install --quiet -r requirements.txt
+    shasum -a 256 requirements.txt > "$STAMP"
+fi
+
 if [ ! -f .env ]; then
     echo "→ first run: creating .env"
     {
-        echo "HW_SECRET_KEY=$(python3 -m hwserver.keygen)"
+        echo "HW_SECRET_KEY=$("$VENV_PY" -m hwserver.keygen)"
         echo "HW_INVITE_CODE=letmein"
         echo "HW_LOGIN_MODE=local"
     } > .env
@@ -33,6 +52,13 @@ if lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
     exit 1
 fi
 
+CHROMIUM_STAMP=".venv/.chromium-installed"
+if [ ! -f "$CHROMIUM_STAMP" ]; then
+    echo "→ installing Chromium for Playwright (one-time, also takes a minute)"
+    "$VENV_PY" -m playwright install chromium
+    touch "$CHROMIUM_STAMP"
+fi
+
 echo "→ invite code: ${HW_INVITE_CODE}"
 echo "→ listening on http://localhost:8000"
-exec python3 -m hwserver
+exec "$VENV_PY" -m hwserver

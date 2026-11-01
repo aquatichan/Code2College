@@ -54,6 +54,12 @@ if (_novnc_root := authflow.novnc_web_root()) is not None:
     app.mount("/novnc", StaticFiles(directory=_novnc_root, html=True), name="novnc")
 
 
+@app.get("/", include_in_schema=False)
+def root() -> dict[str, str]:
+    """Friendly answer for anyone who opens the address in a browser."""
+    return {"app": "Hirewatch", "status": "running", "note": "This is the server; use the Hirewatch app."}
+
+
 @app.get("/healthz")
 def healthz() -> dict[str, bool]:
     """Liveness probe for the host; touches nothing user-specific."""
@@ -191,8 +197,8 @@ async def login_stream(ws: WebSocket, session_id: str, key: str) -> None:
         writer.close()
         try:
             await ws.close()
-        except RuntimeError:
-            pass  # already closed by the client
+        except Exception:
+            pass  # the client is usually already gone by now
 
 
 @app.get("/auth/session/{session_id}")

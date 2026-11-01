@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// One cycle in full: what was added, changed and removed on each page.
+/// One scan in full: what was added, changed and removed on each page.
 struct ScanDetailView: View {
     let scanID: Int
 
     @Environment(AppState.self) private var app
     @State private var detail: ScanDetail?
-    @State private var error: String?
+    @State private var missing = false
 
     var body: some View {
         ScrollView {
@@ -25,17 +25,22 @@ struct ScanDetailView: View {
                         }
                     }
 
-                    let quiet = detail.pages.count - detail.changedPages.count
+                    let failed = detail.pages.filter { $0.error != nil }
+                    let quiet = detail.pages.count - detail.changedPages.count - failed.count
                     if quiet > 0 {
                         Text("\(Format.plural(quiet, "page")) unchanged")
                             .font(.caption)
                             .foregroundStyle(Theme.textMuted)
                             .frame(maxWidth: .infinity)
                     }
+
+                    if !failed.isEmpty {
+                        failures(failed)
+                    }
                 }
                 .padding(16)
-            } else if let error {
-                Text(error).foregroundStyle(Theme.removed).padding()
+            } else if missing {
+                Text("This scan is no longer stored.").foregroundStyle(Theme.textMuted).padding()
             } else {
                 ProgressView().tint(Theme.accent).padding(.top, 60)
             }
@@ -49,22 +54,37 @@ struct ScanDetailView: View {
     private func summary(for detail: ScanDetail) -> String {
         guard detail.status == "ok" else { return detail.error ?? detail.status }
         let changed = detail.changedPages
-        guard !changed.isEmpty else { return "Nothing changed this cycle" }
+        guard !changed.isEmpty else { return "Nothing changed this scan" }
         return "\(Format.plural(detail.changeCount, "change")) across \(Format.plural(changed.count, "page"))"
     }
 
-    private func load() async {
-        guard let client = app.client else { return }
-        do {
-            detail = try await client.scan(id: scanID)
-        } catch {
-            self.error = error.localizedDescription
+    /// Pages that couldn't be read. Shown so a page whose markup moved doesn't
+    /// just go quiet.
+    private func failures(_ pages: [PageDiff]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Couldn't check \(Format.plural(pages.count, "page"))")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.removed)
+            ForEach(pages) { page in
+                Text("\(page.label): \(page.error ?? "")")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textMuted)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func load() async {
+        detail = await LocalStore.shared.scan(id: scanID)
+        missing = detail == nil
     }
 }
 
 private struct PageCard: View {
-    let page: PageDiffDTO
+    let page: PageDiff
     let onShowHistory: () -> Void
 
     var body: some View {
@@ -74,21 +94,13 @@ private struct PageCard: View {
                     Text(page.label)
                         .font(.headline)
                         .foregroundStyle(Theme.text)
-                    Text("View history →")
+                    Text("View page →")
                         .font(.caption2)
                         .foregroundStyle(Theme.accent)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
-
-            if let path = page.screenshotPath {
-                AuthedImage(path: path, contentMode: .fill)
-                    .frame(height: 180)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
 
             ForEach(page.added) { item in
                 ItemRow(item: item, tint: Theme.added, label: "NEW")
@@ -107,7 +119,7 @@ private struct PageCard: View {
 }
 
 private struct ItemRow: View {
-    let item: ItemDTO
+    let item: Item
     let tint: Color
     let label: String
 
@@ -136,7 +148,7 @@ private struct ItemRow: View {
 }
 
 private struct ChangedRow: View {
-    let change: ChangedItemDTO
+    let change: ItemChange
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
